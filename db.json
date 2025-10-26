@@ -1,0 +1,11 @@
+{
+    "teams": [
+      { "id": 1, "name": "Team A" },
+      { "id": 2, "name": "Team B" }
+    ],
+    "players": [
+      { "id": 1, "teamId": 1, "name": "Alice", "position": "Forward", "number": 9 },
+      { "id": 2, "teamId": 1, "name": "Bob", "position": "Midfield", "number": 8 }
+    ]
+  }
+  
