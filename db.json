@@ -1,11 +1,102 @@
 {
-    "teams": [
-      { "id": 1, "name": "Team A" },
-      { "id": 2, "name": "Team B" }
-    ],
-    "players": [
-      { "id": 1, "teamId": 1, "name": "Alice", "position": "Forward", "number": 9 },
-      { "id": 2, "teamId": 1, "name": "Bob", "position": "Midfield", "number": 8 }
-    ]
-  }
-  
+  "teams": [
+    {
+      "id": "1",
+      "name": "Team A"
+    },
+    {
+      "id": "2",
+      "name": "Team B"
+    },
+    {
+      "id": "53f3",
+      "name": "Real Valladolid"
+    }
+  ],
+  "players": [
+    {
+      "id": "1",
+      "teamId": 1,
+      "name": "Alice",
+      "position": "Forward",
+      "number": 9
+    },
+    {
+      "id": "2",
+      "teamId": 1,
+      "name": "Bob",
+      "position": "Midfield",
+      "number": 8
+    },
+    {
+      "id": "40bb",
+      "teamId": "53f3",
+      "name": "Trilli",
+      "position": "Right-Back",
+      "number": 2
+    },
+    {
+      "id": "de63",
+      "teamId": "53f3",
+      "name": "Guille Bueno",
+      "position": "Left-Back",
+      "number": 3
+    },
+    {
+      "id": "91bc",
+      "teamId": "53f3",
+      "name": "David Torres",
+      "position": "Centre-Back",
+      "number": 4
+    },
+    {
+      "id": "b92d",
+      "teamId": "53f3",
+      "name": "Javi Sánchez",
+      "position": "Centre-Back",
+      "number": 5
+    },
+    {
+      "id": "be73",
+      "teamId": "53f3",
+      "name": "Víctor Meseguer",
+      "position": "Central Midfielder",
+      "number": 8
+    },
+    {
+      "id": "fe43",
+      "teamId": "53f3",
+      "name": "Stanko Jurić",
+      "position": "Defensive Midfielder",
+      "number": 24
+    },
+    {
+      "id": "46fb",
+      "teamId": "53f3",
+      "name": "Julien Ponceau",
+      "position": "Attacking Midfielder",
+      "number": 21
+    },
+    {
+      "id": "100f",
+      "teamId": "53f3",
+      "name": "Amath Ndiaye",
+      "position": "Right Winger",
+      "number": 11
+    },
+    {
+      "id": "4732",
+      "teamId": "53f3",
+      "name": "Juanmi Latasa",
+      "position": "Centre-Forward",
+      "number": 9
+    },
+    {
+      "id": "856d",
+      "teamId": "53f3",
+      "name": "Marcos André",
+      "position": "Centre-Forward",
+      "number": 10
+    }
+  ]
+}

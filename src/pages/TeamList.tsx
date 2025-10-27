@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import type { Team } from "../types/types";
+import AddTeamForm from "../components/AddTeamForm";
 
 export default function TeamList() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -24,6 +25,7 @@ export default function TeamList() {
   return (
     <section>
       <h2>Teams</h2>
+      <AddTeamForm onTeamAdded={(newTeam) => setTeams([...teams, newTeam])} />
       <ul>
         {teams.map(team => (
           <li key={team.id}>
