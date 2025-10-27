@@ -3,6 +3,8 @@ import TeamList from "./pages/TeamList";
 import TeamDetail from "./pages/TeamDetail";
 import Menu from "./components/Menu";
 import Footer from "./components/Footer";
+import "./App.css";
+import "./index.css";
 
 function App() {
   return (
