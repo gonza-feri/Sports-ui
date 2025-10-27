@@ -1,15 +1,12 @@
-:root {
-  --color-bg: #0B1E3D;
-  --color-card: #1C2A4A;
-  --color-text: #ffffff;
-  --color-text-secondary: #B0B0B0;
-  --color-primary: #E30613;
-  --color-primary-hover: #FF1A2A;
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--color-card);
+  padding: 1rem 2rem;
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: 'Poppins', sans-serif;
-  margin: 0;
+.logo {
+  width: 40px;
+  height: 40px;
 }
