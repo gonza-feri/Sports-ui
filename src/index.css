@@ -1,6 +1,6 @@
 :root {
-  --color-bg: #121212;
-  --color-card: #1E1E2F;
+  --color-bg: #1B1B2F;
+  --color-card: #23233A;
   --color-text: #FFFFFF;
   --color-text-secondary: #B0B0B0;
   --color-primary: #E30613;
@@ -14,4 +14,100 @@ body {
   font-family: 'Poppins', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+/* Grid de tarjetas */
+.team-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columnas en escritorio */
+  gap: 1rem;
+}
+
+/* Tarjeta */
+.team-card {
+  background: var(--color-card, #1E1E2F);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  padding: 1.2rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+}
+
+/* Contenido interno: nombre a la izquierda, acciones a la derecha */
+.card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Enlace y nombre del equipo */
+.team-link {
+  text-decoration: none;
+}
+
+.team-name {
+  color: var(--color-text, #FFFFFF);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Botonera */
+.actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+/* Botones */
+.btn {
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn--secondary {
+  background: var(--color-success, #27AE60);
+  color: #fff;
+}
+
+.btn--secondary:hover {
+  background: #2ecc71;
+}
+
+.btn--danger {
+  background: var(--color-primary, #E30613);
+  color: #fff;
+}
+
+.btn--danger:hover {
+  background: var(--color-primary-hover, #FF1A2A);
+}
+
+.nav-btn {
+  background: var(--color-primary);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+.nav-btn:hover {
+  background: var(--color-primary-hover);
+}
+
+
+/* Responsive: una columna en móvil */
+@media (max-width: 768px) {
+  .team-list {
+    grid-template-columns: 1fr;
+  }
 }
