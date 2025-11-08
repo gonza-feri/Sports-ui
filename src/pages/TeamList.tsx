@@ -19,7 +19,7 @@ export default function TeamList() {
 
   return (
   <section>
-    <Menu onToggleForm={() => setShowForm(!showForm)} />
+    <Menu />
 
     {showForm && (
       <div className="card form-card">
