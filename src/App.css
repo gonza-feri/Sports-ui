@@ -12,16 +12,6 @@
   height: 40px;
 }
 
-/* Grid de tarjetas */
-.team-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* 3 columnas en escritorio */
-  gap: 1rem;
-}
-
 /* Tarjeta */
 .team-card {
   background: var(--color-card, #1E1E2F);
@@ -98,12 +88,4 @@
 }
 .nav-btn:hover {
   background: var(--color-primary-hover);
-}
-
-
-/* Responsive: una columna en móvil */
-@media (max-width: 768px) {
-  .team-list {
-    grid-template-columns: 1fr;
-  }
 }

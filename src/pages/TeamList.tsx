@@ -5,6 +5,7 @@ import type { Team, Player } from "../types/types";
 import AddTeamForm from "../components/AddTeamForm";
 import EditTeamForm from "../components/EditTeamForm";
 import Menu from "../components/Menu";
+import FloatingButton from "../components/FloatingButton";
 
 export default function TeamList() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -31,9 +32,6 @@ export default function TeamList() {
         />
       </div>
     )}
-
-      <AddTeamForm onTeamAdded={(newTeam) => setTeams([...teams, newTeam])} />
-
       <ul className="team-list">
         {teams.map(team => (
           <li key={team.id} className="team-card">
@@ -89,6 +87,7 @@ export default function TeamList() {
           </li>
         ))}
       </ul>
+      <FloatingButton />
     </section>
   );
 }
