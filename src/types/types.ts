@@ -1,19 +1,24 @@
-export interface Player {
+export type Player = {
   id: number;
   teamId: number;
   name: string;
-  position: string;
   number: number;
-}
+  positions: string[];
+  photo: string;
+};
 
-export interface Team {
+export type Team = {
   id: number;
   name: string;
-}
+  description: string;
+  logo: string;
+  players: Player[];
+};
 
-export interface PlayerForm {
+
+export type PlayerForm = {
   name: string;
-  age: number;
-  position: string;
-  photo?: File | null;
-}
+  number: number;
+  positions: string[];
+  photo: File | null;
+};

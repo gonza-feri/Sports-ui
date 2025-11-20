@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+type FloatingButtonProps = {
+  onClick?: () => void;
+};
 
-export default function FloatingButton() {
+export default function FloatingButton({ onClick} : FloatingButtonProps) {
   return (
-    <Link to="/teams/add" className="floating-btn">
+    <button className="floating-btn" onClick={onClick}>
       +
-    </Link>
+    </button>
   );
 }

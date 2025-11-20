@@ -1,0 +1,248 @@
+/* 🔲 Formulario principal */
+.form-card {
+  background: #1e1e2f;
+  color: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 650px;
+  margin: 2rem auto;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.form-card h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #ff4d4d;
+}
+
+.form-card label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+/* 🔲 Inputs y selects */
+.form-card input,
+.form-card textarea,
+.form-card select {
+  width: 100%;
+  padding: 0.7rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  border: none;
+  background: #2a2a3d;
+  color: #fff;
+}
+
+.form-card input:focus,
+.form-card textarea:focus,
+.form-card select:focus {
+  outline: 2px solid #ff4d4d;
+}
+
+/* 🔲 Logo preview */
+.logo-preview {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.player-actions {
+  display: flex;
+  justify-content: space-between; /* Collapse a la izquierda, Delete a la derecha */
+  margin-top: 1.5rem;
+}
+
+.player-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2a2a3d;          /* el cuadro se mantiene igual */
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+  font-weight: 500;
+}
+
+.btn-delete-position {
+  background: none;       /* transparente */
+  border: none;
+  color: #ff4d4d;         /* rojo fuerte */
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+.btn-delete-position:hover {
+  color: #b71c1c;
+}
+
+.btn--delete-text {
+  background: none;          /* transparente */
+  border: none;
+  color: #ff4d4d;            /* solo texto rojo */
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;                /* sin padding extra */
+}
+
+.btn--delete-text:hover {
+  text-decoration: underline; /* feedback visual al pasar el ratón */
+}
+
+.add-position-link {
+  color: #ff4d4d;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.85rem;
+  display: inline-block;
+  margin-top: 0.6rem;   /* espacio respecto al select anterior */
+  margin-bottom: 1rem;  /* 👈 espacio hacia el campo de abajo */
+}
+
+.add-position-link:hover {
+  color: #b71c1c;
+}
+
+
+/* 🔲 Header de jugadores */
+.players-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 2rem 0 1rem;
+}
+
+.players-header h3 {
+  margin: 0;
+  color: #ff4d4d;
+}
+
+/* 🔲 Botones generales */
+.btn {
+  display: inline-block;
+  padding: 0.8rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+/* 🔴 Botones rojos grandes (Add Player) */
+.btn--red {
+  background: #d62828;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn--red:hover {
+  background: #b71c1c;
+}
+
+/* 🟢 Botones verdes grandes (Save Team) */
+.btn--green {
+  background: #28a745;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn--green:hover {
+  background: #218838;
+}
+
+/* 🔴 Botón rojo muy pequeño y apagado */
+.btn--red-tiny {
+  background: #aa2e2e;       /* rojo más apagado */
+  color: #fff;
+  font-size: 0.65rem;        /* más pequeño todavía */
+  padding: 0.2rem 0.5rem;    /* mínimo padding */
+  border-radius: 5px;
+  line-height: 1;
+}
+
+.btn--red-tiny:hover {
+  background: #922626;       /* hover también apagado */
+}
+
+.btn--green-tiny {
+  background: #28a745;       /* rojo más apagado */
+  color: #fff;
+  font-size: 0.65rem;        /* más pequeño todavía */
+  padding: 0.2rem 0.5rem;    /* mínimo padding */
+  border-radius: 5px;
+  line-height: 1;
+}
+
+.btn--green-tiny:hover {
+  background: #218838;       /* hover también apagado */
+}
+
+/* Ajuste dentro del bloque de jugador */
+.player-form .btn--red-tiny {
+  margin-top: 0.3rem;
+  margin-bottom: 1.2rem;     /* más hueco debajo para separar de Photo */
+  align-self: flex-start;
+}
+
+/* 🔲 Bloques de jugador */
+.player-form {
+  background: #242434;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+
+  /* 👇 evita que nada se salga */
+  overflow-x: hidden;
+}
+
+.player-form input,
+.player-form select {
+  width: 100%;          /* ocupa todo el ancho disponible */
+  max-width: 100%;      /* nunca se pasa del cuadro */
+  box-sizing: border-box; /* incluye padding/border en el cálculo */
+}
+
+
+.player-form label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.player-form input,
+.player-form select {
+  border-radius: 8px;
+  margin-bottom: 0.8rem;
+}
+
+.player-photo-preview {
+  margin-top: 0.6rem;
+  max-width: 120px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* 🔲 Botón Add Position dentro de jugador */
+.player-form .btn--red-small {
+  margin-top: 0.5rem;
+}
+
+/* 🔲 Acciones finales */
+.form-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 3rem;
+}

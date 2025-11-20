@@ -2,23 +2,33 @@ import { useState } from "react";
 import api from "../services/api";
 import type { Team } from "../types/types";
 
-interface Props {
-  onTeamAdded: (team: Team) => void;
-}
+type AddTeamFormProps = {
+  onTeamAdded: (newTeam: Team) => void;
+  onCancel?: () => void;
+};
 
-export default function AddTeamForm({ onTeamAdded }: Props) {
-  const [name, setName] = useState("");
+export default function AddTeamForm({ onTeamAdded, onCancel }: AddTeamFormProps) {
+  const [team, setTeam] = useState<Omit<Team, "id">>({
+    name: "",
+    description: "",
+    logo: "",
+    players: [],
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setTeam({ ...team, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
     try {
-      const res = await api.post("/teams", { name });
-      onTeamAdded(res.data);
-      setName("");
-    } catch (error) {
-      console.error("Error adding team:", error);
+      const res = await api.post("/teams", team);
+      const createdTeam: Team = res.data;
+      onTeamAdded(createdTeam);
+    } catch (err) {
+      console.error("Error creando equipo:", err);
     }
   };
 
@@ -26,11 +36,32 @@ export default function AddTeamForm({ onTeamAdded }: Props) {
     <form onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Team name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
+        name="name"
+        placeholder="Team Name"
+        value={team.name}
+        onChange={handleChange}
+        required
       />
-      <button type="submit">Add Team</button>
+      <textarea
+        name="description"
+        placeholder="Description"
+        value={team.description}
+        onChange={handleChange}
+      />
+      <input
+        type="text"
+        name="logo"
+        placeholder="Logo URL"
+        value={team.logo}
+        onChange={handleChange}
+      />
+
+      <button type="submit">Save</button>
+      {onCancel && (
+        <button type="button" onClick={onCancel}>
+          Cancelar
+        </button>
+      )}
     </form>
   );
 }

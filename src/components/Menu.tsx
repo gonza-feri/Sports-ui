@@ -1,34 +1,81 @@
-import { NavLink } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import logo from "../assets/logo-dl.png";
 
 export default function Menu() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isTeamsAdd = location.pathname.startsWith("/teams/add");
+
+  // 👇 estado para mostrar/ocultar el header
+  const [showHeader, setShowHeader] = useState(true);
+  let lastScrollY = 0;
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY) {
+        setShowHeader(false); // bajando → ocultar
+      } else {
+        setShowHeader(true); // subiendo → mostrar
+      }
+      lastScrollY = window.scrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 👇 función genérica para confirmar salida
+  const handleNavClick = (e: React.MouseEvent, path: string) => {
+    e.preventDefault();
+    if (isTeamsAdd) {
+      const confirmLeave = window.confirm(
+        "If you return, you will lose any unsaved changes. Do you want to continue?"
+      );
+      if (confirmLeave) navigate(path);
+    } else {
+      navigate(path);
+    }
+  };
+
   return (
-    <header className="app-header">
-      {/* Logo + título */}
+    <header className={`app-header ${showHeader ? "visible" : "hidden"}`}>
+      {/* Logo + título como enlace */}
       <div className="logo-area">
-        <img src={logo} alt="Dream League logo" className="logo-img" />
-        <h1>Dream League</h1>
+        <a href="/" onClick={(e) => handleNavClick(e, "/")} className="logo-link">
+          <img src={logo} alt="Dream League logo" className="logo-img" />
+          <h1>Dream League</h1>
+        </a>
       </div>
 
       {/* Navegación */}
       <nav className="nav-text">
-        <NavLink
-          to="/"
-          end
-          className={({ isActive }) =>
-            isActive ? "nav-item active" : "nav-item inactive"
+        <a
+          href="/"
+          onClick={(e) => handleNavClick(e, "/")}
+          className={
+            isTeamsAdd
+              ? "nav-item inactive"
+              : location.pathname === "/"
+              ? "nav-item active"
+              : "nav-item inactive"
           }
         >
           Home
-        </NavLink>
-        <NavLink
-          to="/teams"
-          className={({ isActive }) =>
-            isActive ? "nav-item active" : "nav-item inactive"
+        </a>
+        <a
+          href="/teams"
+          onClick={(e) => handleNavClick(e, "/teams")}
+          className={
+            isTeamsAdd
+              ? "nav-item inactive"
+              : location.pathname.startsWith("/teams")
+              ? "nav-item active"
+              : "nav-item inactive"
           }
         >
           Teams
-        </NavLink>
+        </a>
       </nav>
     </header>
   );

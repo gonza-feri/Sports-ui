@@ -14,6 +14,7 @@ body {
   font-family: 'Poppins', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
+  padding-top: 56px;
 }
 
 /* Grid de tarjetas */
@@ -117,21 +118,32 @@ body {
 }
 
 .app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #1e1e2f;
+  z-index: 1000;
+  padding: 0.4rem 1rem;   /* más fino */
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 1.2rem; /* más compacto */
-  background: #1e1e2f;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease;
+  height: 56px;           /* altura lógica */
 }
 
-.nav-text {
-  display: flex;
-  gap: 2rem;
+.app-header.hidden {
+  transform: translateY(-100%); /* se oculta hacia arriba */
 }
 
-.nav-item {
-  text-decoration: none;
-  transition: color 0.2s ease, font-size 0.2s ease;
+.app-header.visible {
+  transform: translateY(0); /* aparece */
+}
+
+.nav-text .nav-item {
+  font-size: 0.95rem;     /* enlaces más pequeños */
+  margin-left: 1rem;
 }
 
 .nav-item.active {
@@ -186,23 +198,22 @@ body {
   background: var(--color-primary-hover);
 }
 
-.logo-area {
+.logo-area .logo-link {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
+  align-items: center; /* logo y texto en la misma línea */
+  text-decoration: none; /* quitar subrayado */
+  color: inherit;        /* mantener color del texto */
 }
 
-.logo-link {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  text-decoration: none;
-  color: inherit;
+.logo-area .logo-img {
+  width: 32px;
+  height: 32px;
+  margin-right: 0.6rem; /* espacio entre logo y texto */
 }
 
-.logo-img {
-  width: 40px;
-  height: 40px;
+.logo-area h1 {
+  font-size: 1.1rem;
+  margin: 0;
 }
 
 .home-actions {
