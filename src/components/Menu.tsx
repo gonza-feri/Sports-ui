@@ -1,17 +1,34 @@
-import { Link } from "react-router-dom";
-import logo from "../assets/logo-dl.png";
 import { NavLink } from "react-router-dom";
+import logo from "../assets/logo-dl.png";
 
 export default function Menu() {
   return (
     <header className="app-header">
-      <Link to="/" className="logo-link">
+      {/* Logo + título */}
+      <div className="logo-area">
         <img src={logo} alt="Dream League logo" className="logo-img" />
         <h1>Dream League</h1>
-      </Link>
-      <nav className="home-nav">
-        <NavLink to="/" className={({ isActive }) => isActive ? "nav-btn active" : "nav-btn"}>Home</NavLink>
-        <NavLink to="/teams" className={({ isActive }) => isActive ? "nav-btn active" : "nav-btn"}>Teams</NavLink>
+      </div>
+
+      {/* Navegación */}
+      <nav className="nav-text">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            isActive ? "nav-item active" : "nav-item inactive"
+          }
+        >
+          Home
+        </NavLink>
+        <NavLink
+          to="/teams"
+          className={({ isActive }) =>
+            isActive ? "nav-item active" : "nav-item inactive"
+          }
+        >
+          Teams
+        </NavLink>
       </nav>
     </header>
   );

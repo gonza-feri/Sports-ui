@@ -117,12 +117,32 @@ body {
 }
 
 .app-header {
-  background: var(--color-card);
-  padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  padding: 0.6rem 1.2rem; /* más compacto */
+  background: #1e1e2f;
+}
+
+.nav-text {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-item {
+  text-decoration: none;
+  transition: color 0.2s ease, font-size 0.2s ease;
+}
+
+.nav-item.active {
+  color: #fff;       /* blanco */
+  font-size: 1.3rem; /* más grande */
+  font-weight: 700;
+}
+
+.nav-item.inactive {
+  color: #aaa;       /* gris apagado */
+  font-size: 1rem;   /* más pequeño */
 }
 
 .header-actions {
@@ -166,6 +186,12 @@ body {
   background: var(--color-primary-hover);
 }
 
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .logo-link {
   display: flex;
   align-items: center;
@@ -175,9 +201,8 @@ body {
 }
 
 .logo-img {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
+  width: 40px;
+  height: 40px;
 }
 
 .home-actions {
