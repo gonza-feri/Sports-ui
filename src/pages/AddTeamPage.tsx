@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import type { PlayerForm, Team, Player } from "../types/types";
 import Menu from "../components/Menu";
 import "./AddTeamPage.css";
+import { uploadFile } from "../services/upload";
 
 export default function AddTeamPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>(); // 👈 detectar modo edición
 
   const [teamName, setTeamName] = useState("");
   const [description, setDescription] = useState("");
@@ -15,22 +17,49 @@ export default function AddTeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const positions = ["Undefined", "Goalkeeper (GK)", "Center Back (CB)", "Left Back (LB)", "Right Back (RB)", "Sweeper (SW)", "Wing Back (LWB/RWB)",
+  const positions = [
+    "Undefined", "Goalkeeper (GK)", "Center Back (CB)", "Left Back (LB)", "Right Back (RB)", "Sweeper (SW)", "Wing Back (LWB/RWB)",
     "Defensive Midfielder (DM/CDM)", "Central Midfielder (CM)", "Attacking Midfielder (AM/CAM)", "Left Midfielder (LM)", "Right Midfielder (RM)",
-    "Striker (ST)", "Center Forward (CF)", "Winger (LW/RW)", "Forward (FW)"];
+    "Striker (ST)", "Center Forward (CF)", "Winger (LW/RW)", "Forward (FW)"
+  ];
+
+  // 👇 cargar datos si estamos editando
+  useEffect(() => {
+    const fetchTeam = async () => {
+      if (!id) return;
+      try {
+        const teamRes = await api.get(`/teams/${id}`);
+        const team: Team = teamRes.data;
+
+        setTeamName(team.name ?? "");
+        setDescription(team.description ?? "");
+
+        // Mapeo mínimo a PlayerForm (sin tocar tipos): posiciones del backend o "Undefined"
+        const mappedPlayers: PlayerForm[] = (team.players || []).map((p: Player) => ({
+          name: p.name ?? "",
+          number: p.number ?? 0,
+          positions: p.positions?.length ? p.positions : ["Undefined"],
+          photo: null // si guardas URL en backend, aquí podrías mostrarla en otro campo si lo necesitas
+        }));
+        setPlayers(mappedPlayers);
+      } catch (err) {
+        console.error("Error cargando equipo:", err);
+        setError("No se pudo cargar el equipo.");
+      }
+    };
+    fetchTeam();
+  }, [id]);
 
   const addPlayer = () => {
     const newPlayer: PlayerForm = {
       name: "",
       number: 0,
-      positions: [""],
+      positions: ["Undefined"], // ✅ usar tu array, no string vacío
       photo: null
     };
 
     const updated = [...players, newPlayer];
     setPlayers(updated);
-
-    // 👇 expandimos automáticamente el último jugador añadido
     setExpandedIndex(updated.length - 1);
   };
 
@@ -44,14 +73,20 @@ export default function AddTeamPage() {
     }
 
     try {
-      // 1) Crear equipo (sin jugadores aún)
-      const teamRes = await api.post("/teams", {
+      let logoUrl = null;
+      if (logo) {
+        logoUrl = await uploadFile(logo);
+      }
+
+      const payload = {
         name: teamName.trim(),
         description: description.trim(),
-        logo: logo ? logo.name : "", // opcional: solo guardamos nombre de archivo
+        logo: logoUrl ?? "" ,
         players: []
-      });
-      const createdTeam: Team = teamRes.data;
+      };
+
+      const teamRes = await api.post("/teams", payload);
+      const createdTeam = teamRes.data;
 
       // 2) Crear jugadores (si tienen nombre)
       const createdPlayers: Player[] = [];
@@ -87,7 +122,7 @@ export default function AddTeamPage() {
     <div>
       <Menu />
       <section className="form-card">
-        <h2>Characteristics of the Team</h2>
+        <h2>{id ? "Edit Team" : "Characteristics of the Team"}</h2>
         {error && <p className="error">{error}</p>}
 
         <form onSubmit={handleSubmit}>
@@ -119,7 +154,7 @@ export default function AddTeamPage() {
               />
             </div>
           )}
-          
+
           <div className="players-header">
             <h3>Players</h3>
             <button type="button" className="btn btn--red" onClick={addPlayer}>
@@ -171,7 +206,6 @@ export default function AddTeamPage() {
                         ))}
                       </select>
 
-                      {/* Botón para eliminar posición */}
                       {p.positions.length > 1 && (
                         <button
                           type="button"
@@ -206,15 +240,14 @@ export default function AddTeamPage() {
                     onChange={e => {
                       const file = e.target.files?.[0] ?? null;
                       const updated = [...players];
-                      updated[i].photo = file; // 👈 guardamos el File
+                      updated[i].photo = file;
                       setPlayers(updated);
                     }}
                   />
 
-                  {/* Vista previa debajo */}
                   {p.photo && (
                     <img
-                      src={URL.createObjectURL(p.photo)} // 👈 generamos URL temporal para mostrar
+                      src={URL.createObjectURL(p.photo)}
                       alt={`${p.name || "Player"} photo`}
                       className="player-photo-preview"
                     />
@@ -234,7 +267,7 @@ export default function AddTeamPage() {
                       className="btn btn--red"
                       onClick={() => {
                         const updated = [...players];
-                        updated.splice(i, 1); // elimina jugador
+                        updated.splice(i, 1);
                         setPlayers(updated);
                         setExpandedIndex(null);
                       }}
@@ -272,7 +305,6 @@ export default function AddTeamPage() {
               Save Team
             </button>
           </div>
-
         </form>
       </section>
     </div>

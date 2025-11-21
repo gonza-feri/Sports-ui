@@ -49,7 +49,7 @@ export default function TeamDetail() {
       <ul>
         {players.map(player => (
           <li key={player.id}>
-            #{player.number} {player.name} – {player.position}
+            #{player.number} {player.name} – {player.positions}
             <button onClick={() => setEditingPlayer(player)}>Edit</button>
             <button onClick={async () => {
               await api.delete(`/players/${player.id}`);

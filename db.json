@@ -59,6 +59,26 @@
           "teamId": "4e0d"
         }
       ]
+    },
+    {
+      "id": "3c89",
+      "name": "Paura FC",
+      "description": "",
+      "logo": "FC_Barcelona_(crest).svg.webp",
+      "players": [
+        {
+          "id": "99be",
+          "name": "Leo Messi",
+          "number": 10,
+          "positions": [
+            "Winger (LW/RW)",
+            "Left Midfielder (LM)",
+            "Left Back (LB)"
+          ],
+          "photo": "",
+          "teamId": "3c89"
+        }
+      ]
     }
   ],
   "players": [
@@ -97,6 +117,18 @@
       ],
       "photo": "ronaldo.avif",
       "teamId": "4e0d"
+    },
+    {
+      "id": "99be",
+      "name": "Leo Messi",
+      "number": 10,
+      "positions": [
+        "Winger (LW/RW)",
+        "Left Midfielder (LM)",
+        "Left Back (LB)"
+      ],
+      "photo": "",
+      "teamId": "3c89"
     }
   ]
 }
