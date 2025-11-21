@@ -17,8 +17,10 @@ export type Team = {
 
 
 export type PlayerForm = {
+  id?: number;
   name: string;
   number: number;
   positions: string[];
   photo: File | null;
+  photoPreview?: string | null;
 };

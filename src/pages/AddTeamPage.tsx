@@ -4,7 +4,6 @@ import api from "../services/api";
 import type { PlayerForm, Team, Player } from "../types/types";
 import Menu from "../components/Menu";
 import "./AddTeamPage.css";
-import { uploadFile } from "../services/upload";
 
 export default function AddTeamPage() {
   const navigate = useNavigate();
@@ -13,6 +12,7 @@ export default function AddTeamPage() {
   const [teamName, setTeamName] = useState("");
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [players, setPlayers] = useState<PlayerForm[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -73,19 +73,12 @@ export default function AddTeamPage() {
     }
 
     try {
-      let logoUrl = null;
-      if (logo) {
-        logoUrl = await uploadFile(logo);
-      }
-
-      const payload = {
+      const teamRes = await api.post("/teams", {
         name: teamName.trim(),
         description: description.trim(),
-        logo: logoUrl ?? "" ,
+        logo: logoPreview ?? "",   // 👈 guardamos la URL temporal
         players: []
-      };
-
-      const teamRes = await api.post("/teams", payload);
+      });
       const createdTeam = teamRes.data;
 
       // 2) Crear jugadores (si tienen nombre)
@@ -142,13 +135,17 @@ export default function AddTeamPage() {
           <label>Logo</label>
           <input
             type="file"
-            onChange={e => setLogo(e.target.files?.[0] ?? null)}
+            onChange={e => {
+              const file = e.target.files?.[0] ?? null;
+              setLogo(file);
+              setLogoPreview(file ? URL.createObjectURL(file) : null);
+            }}
           />
 
-          {logo && (
+          {logoPreview && (
             <div className="logo-preview">
               <img
-                src={URL.createObjectURL(logo)}
+                src={logoPreview}
                 alt="Team logo preview"
                 style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "50%" }}
               />

@@ -79,6 +79,66 @@
           "teamId": "3c89"
         }
       ]
+    },
+    {
+      "id": "ce04",
+      "name": "Paura FC",
+      "description": "",
+      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
+      "players": [
+        {
+          "id": "54ca",
+          "name": "Leo Messi",
+          "number": 10,
+          "positions": [
+            "Winger (LW/RW)",
+            "Left Midfielder (LM)",
+            "Left Back (LB)"
+          ],
+          "photo": "",
+          "teamId": "ce04"
+        }
+      ]
+    },
+    {
+      "id": "e14d",
+      "name": "Paura FC",
+      "description": "",
+      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
+      "players": [
+        {
+          "id": "7c72",
+          "name": "Leo Messi",
+          "number": 10,
+          "positions": [
+            "Winger (LW/RW)",
+            "Left Midfielder (LM)",
+            "Left Back (LB)"
+          ],
+          "photo": "ronaldo.avif",
+          "teamId": "e14d"
+        }
+      ]
+    },
+    {
+      "id": "9d6b",
+      "name": "Paura FC",
+      "description": "",
+      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
+      "players": [
+        {
+          "id": "77d1",
+          "name": "Leo Messi",
+          "number": 10,
+          "positions": [
+            "Winger (LW/RW)",
+            "Left Midfielder (LM)",
+            "Left Back (LB)"
+          ],
+          "photo": "",
+          "teamId": "9d6b"
+        }
+      ]
     }
   ],
   "players": [
@@ -129,6 +189,42 @@
       ],
       "photo": "",
       "teamId": "3c89"
+    },
+    {
+      "id": "54ca",
+      "name": "Leo Messi",
+      "number": 10,
+      "positions": [
+        "Winger (LW/RW)",
+        "Left Midfielder (LM)",
+        "Left Back (LB)"
+      ],
+      "photo": "",
+      "teamId": "ce04"
+    },
+    {
+      "id": "7c72",
+      "name": "Leo Messi",
+      "number": 10,
+      "positions": [
+        "Winger (LW/RW)",
+        "Left Midfielder (LM)",
+        "Left Back (LB)"
+      ],
+      "photo": "ronaldo.avif",
+      "teamId": "e14d"
+    },
+    {
+      "id": "77d1",
+      "name": "Leo Messi",
+      "number": 10,
+      "positions": [
+        "Winger (LW/RW)",
+        "Left Midfielder (LM)",
+        "Left Back (LB)"
+      ],
+      "photo": "",
+      "teamId": "9d6b"
     }
   ]
 }
