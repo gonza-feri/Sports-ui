@@ -36,7 +36,8 @@ export default function AddTeamPage() {
           number: p.number ?? 0,
           positions: p.positions?.length ? p.positions : ["Undefined"],
           photo: null,
-          photoPreview: p.photo ?? null // p.photo debe ser Data URL o URL persistente
+          photoPreview: p.photo ?? null,
+          isStarter: !!p.isStarter
         }));
         setPlayers(mappedPlayers);
       } catch (err) {
@@ -115,7 +116,8 @@ export default function AddTeamPage() {
           number: p.number,
           positions: p.positions,
           photo: p.photoPreview ?? "",
-          teamId: savedTeam.id
+          teamId: savedTeam.id,
+          isStarter: !!p.isStarter
         };
 
         const playerRes = p.id && id
@@ -284,6 +286,19 @@ export default function AddTeamPage() {
                       setPlayers(updated);
                     }}
                   />
+
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={!!p.isStarter}
+                      onChange={e => {
+                        const updated = [...players];
+                        updated[i].isStarter = e.target.checked;
+                        setPlayers(updated);
+                      }}
+                    />
+                    Starter
+                  </label>
 
                   {p.photoPreview && (
                     <img

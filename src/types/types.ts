@@ -1,20 +1,14 @@
+// src/types/types.ts
 export type Player = {
   id: number;
-  teamId: number;
   name: string;
   number: number;
   positions: string[];
-  photo: string;
+  photo?: string;
+  teamId?: number;
+  isStarter?: boolean;        // nuevo: si es titular
+  positionSlot?: string | null; // opcional: "GK","LB","CB1",...
 };
-
-export type Team = {
-  id: number;
-  name: string;
-  description: string;
-  logo: string;
-  players: Player[];
-};
-
 
 export type PlayerForm = {
   id?: number;
@@ -22,5 +16,16 @@ export type PlayerForm = {
   number: number;
   positions: string[];
   photo: File | null;
-  photoPreview?: string | null; // Data URL o URL persistente
+  photoPreview?: string | null;
+  isStarter?: boolean;
+  positionSlot?: string | null;
+};
+
+export type Team = {
+  id: number;
+  name: string;
+  logo?: string;
+  description?: string;
+  players?: Player[];
+  formation?: string; // e.g., "4-3-3"
 };
