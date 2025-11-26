@@ -4,10 +4,10 @@ export type Player = {
   name: string;
   number: number;
   positions: string[];
-  photo?: string;
+  photo?: string;           // data URL o URL persistente
   teamId?: number;
-  isStarter?: boolean;        // nuevo: si es titular
-  positionSlot?: string | null; // opcional: "GK","LB","CB1",...
+  isStarter?: boolean;      // si es titular
+  positionSlot?: string | null;
 };
 
 export type PlayerForm = {
@@ -27,5 +27,5 @@ export type Team = {
   logo?: string;
   description?: string;
   players?: Player[];
-  formation?: string; // e.g., "4-3-3"
+  formation?: string;
 };

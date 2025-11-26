@@ -1,21 +1,22 @@
-/* src/pages/TeamDetailPage.css */
+/* TeamDetailPage.css — versión final ajustada a tus ediciones en rojo */
+
+/* contenedor general */
 .team-detail {
-  padding: 1rem 2rem;
+  padding: 1rem 1.6rem;
 }
 
+/* header */
 .team-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
-
 .team-meta {
   display: flex;
   gap: 1rem;
   align-items: center;
 }
-
 .team-detail-logo {
   width: 64px;
   height: 64px;
@@ -23,133 +24,145 @@
   border-radius: 8px;
 }
 
+/* layout: campo a la izquierda con separación, banquillo a la derecha */
 .formation-and-squad {
   display: flex;
-  gap: 1.5rem;
+  gap: 36px;               /* separación entre campo y banquillo */
   align-items: flex-start;
+  justify-content: flex-start;
+  padding-left: 28px;      /* espacio desde el borde izquierdo */
 }
 
-/* contenedor del pitch: overflow hidden para que nada se salga */
-.pitch-leftwide {
+/* ---------- CAMPO VERTICAL (ancho fijo, altura moderada) ---------- */
+.pitch-vertical {
   position: relative;
-  width: 75vw;
-  max-width: 1100px;
-  height: 90vh;
-  margin: 0 0 0 12px;
+  width: 480px;            /* ancho fijo */
+  height: 880px;           /* altura estética, no excesiva */
   border-radius: 10px;
-  overflow: hidden; /* clave: recorta todo lo que esté fuera del campo */
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  overflow: auto;          /* scroll vertical si el usuario necesita ver todo */
+  box-shadow: 0 8px 20px rgba(0,0,0,0.22);
   background: #0b6b2f;
+}
+.pitch-vertical .pitch-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* overlay absoluto que cubre todo el campo */
 .pitch-overlay-absolute {
   position: absolute;
   inset: 0;
-  pointer-events: none; /* por defecto; cada slot tendrá pointer-events:auto */
+  pointer-events: none;
 }
 
-/* base para cada slot absoluto */
+/* base para cada slot absoluto (centrado en coordenada) */
 .slot-abs {
   position: absolute;
-  transform: translate(-50%, -50%); /* centra el contenido en la coordenada */
-  pointer-events: auto; /* permitir interacción */
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-width: 120px;
+  min-width: 64px;
 }
 
-/* tamaño y estilo de la tarjeta de jugador */
-.player-card {
+/* ---------- JUGADOR MINIMAL (solo foto, nombre y número) ---------- */
+.player-min {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  background: rgba(0,0,0,0.55);
-  padding: 10px;
-  border-radius: 10px;
+  gap: 6px;
   color: #fff;
-  min-width: 140px;
-  transition: transform 160ms ease, box-shadow 160ms ease;
+  text-align: center;
+  background: transparent; /* sin fondo */
 }
-.player-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
-.player-photo { width: 72px; height: 72px; object-fit: cover; border-radius: 50%; border: 3px solid rgba(255,255,255,0.12); }
-.player-name { font-size: 0.95rem; font-weight: 700; text-align:center; }
-.player-number { font-size: 0.85rem; opacity: 0.95; }
-.player-empty { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); padding: 10px 14px; border-radius: 8px; }
-
-/* --- Posiciones absolutas (ajusta porcentajes si quieres afinar) --- */
-/* Coordenadas relativas al contenedor: left (%) y top (%) */
-/* Portero: abajo centro */
-.slot-GK { left: 50%; top: 92%; }
-
-/* Defensas: dos bajos cerca del portero, dos un poco más arriba y abiertos */
-.slot-DF1 { left: 28%; top: 78%; } /* izquierdo bajo */
-.slot-DF2 { left: 42%; top: 74%; } /* izquierdo alto */
-.slot-DF3 { left: 58%; top: 74%; } /* derecho alto */
-.slot-DF4 { left: 72%; top: 78%; } /* derecho bajo */
-
-/* Centrales: fila en el centro del campo, bien espaciados */
-.slot-CM1 { left: 30%; top: 54%; }
-.slot-CM2 { left: 50%; top: 50%; } /* centro exacto */
-.slot-CM3 { left: 70%; top: 54%; }
-
-/* Delanteros: dos abajo cerca del área rival y uno arriba centro */
-.slot-FW1 { left: 36%; top: 18%; } /* izquierdo delantero bajo */
-.slot-FW2 { left: 50%; top: 12%; } /* delantero centro alto */
-.slot-FW3 { left: 64%; top: 18%; } /* derecho delantero bajo */
-
-/* Ajustes responsivos: reducir tamaños en pantallas pequeñas */
-@media (max-width: 900px) {
-  .player-card { min-width: 110px; }
-  .player-photo { width: 56px; height: 56px; }
-  .slot-abs { min-width: 90px; }
+.player-min-photo {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.12);
+}
+.player-min-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-min-number {
+  font-size: 0.75rem;
+  opacity: 0.95;
 }
 
-.slot-label {
-  position: absolute;
-  bottom: 6px;
-  right: 6px;
-  font-size: 0.7rem;
-  opacity: 0.8;
-  color: #fff;
+/* empty minimal */
+.player-empty-min {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.88rem;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.02);
 }
 
-/* squad list */
+/* ---------- BANQUILLO / SUBSTITUTES (panel a la derecha) ---------- */
 .squad-list {
   width: 320px;
-  background: rgba(0,0,0,0.4);
+  max-height: 820px;      /* ligeramente menor que el campo para equilibrio visual */
+  background: rgba(0,0,0,0.30);
   padding: 12px;
   border-radius: 8px;
   color: #fff;
+  overflow: auto;          /* scroll independiente si hay muchos suplentes */
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  margin-right: 18px;      /* separación del borde derecho */
 }
-
+.squad-list h3 { margin-top: 0; }
 .sub-item {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
-
 .sub-photo {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   object-fit: cover;
   border-radius: 6px;
 }
+.sub-info { flex: 1; }
 
-.sub-info {
-  flex: 1;
-}
+/* ---------- POSICIONES ABSOLUTAS (afinadas según tu edición en rojo) ---------- */
+/* Coordenadas relativas al contenedor: left (%) y top (%) */
+/* Portero: abajo centro (ligeramente más arriba para respirar) */
+.slot-GK { left: 50%; top: 90%; }
 
-.btn--small {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-}
+/* Defensas: 2 bajos cerca del portero, 2 un poco más subidos y abiertos */
+/* He movido los dos centrales defensivos un poco hacia el centro y los laterales más abiertos */
+.slot-DF1 { left: 18%; top: 68%; } /* lateral izquierdo bajo */
+.slot-DF2 { left: 36%; top: 74%; } /* central izquierdo alto */
+.slot-DF3 { left: 64%; top: 74%; } /* central derecho alto */
+.slot-DF4 { left: 82%; top: 68%; } /* lateral derecho bajo */
 
-/* footer */
-.team-footer {
-  margin-top: 1rem;
-  color: #ddd;
+/* Centrales / medios: centrados en el medio del campo, alineados y con espacio */
+.slot-CM1 { left: 25%; top: 43%; }
+.slot-CM2 { left: 50%; top: 57%; } /* centro exacto */
+.slot-CM3 { left: 75%; top: 43%; }
+
+/* Delanteros: dos más bajos (cerca del área rival) y uno ligeramente más arriba centro */
+.slot-FW1 { left: 25%; top: 20%; } /* delantero izquierdo */
+.slot-FW2 { left: 50%; top: 10%; } /* delantero centro alto */
+.slot-FW3 { left: 72%; top: 20%; } /* delantero derecho */
+
+/* ---------- Ajustes visuales y responsive ---------- */
+.btn--small { padding: 6px 10px; font-size: 0.82rem; }
+
+@media (max-width: 900px) {
+  .formation-and-squad { gap: 18px; padding-left: 12px; }
+  .pitch-vertical { width: 86vw; height: 760px; }
+  .squad-list { display: none; } /* ocultar banquillo en pantallas pequeñas */
+  .player-min-photo { width: 44px; height: 44px; }
+  .slot-abs { min-width: 56px; }
 }
