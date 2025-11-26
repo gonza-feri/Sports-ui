@@ -63,11 +63,12 @@ export default function AddTeamPage() {
       number: 0,
       positions: ["Undefined"],
       photo: null,
-      photoPreview: null
+      photoPreview: null,
+      isStarter: false
     };
-    const updated = [...players, newPlayer];
+    const updated = [newPlayer, ...players];
     setPlayers(updated);
-    setExpandedIndex(updated.length - 1);
+    setExpandedIndex(0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -236,9 +237,17 @@ export default function AddTeamPage() {
                         {/* mantén tu lista de posiciones */}
                         <option value="Undefined">Undefined</option>
                         <option value="GK">Goalkeeper (GK)</option>
-                        <option value="CB">Center Back (CB)</option>
-                        <option value="LB">Left Back (LB)</option>
                         <option value="RB">Right Back (RB)</option>
+                        <option value="LB">Left Back (LB)</option>
+                        <option value="FB">Full Back (FB)</option>
+                        <option value="CB">Centre-Back (CB)</option>
+                        <option value="DM">Defensive Midfielder (DM)</option>
+                        <option value="CM">Central Midfielder (CM)</option>
+                        <option value="AM">Attacking Midfielder (AM)</option>
+                        <option value="RW">Right Winger (RW)</option>
+                        <option value="LW">Left Winger (LW)</option>
+                        <option value="W">Winger (W)</option>
+                        <option value="CF">Centre Forward (CF)</option>
                         <option value="ST">Striker (ST)</option>
                         {/* ... */}
                       </select>

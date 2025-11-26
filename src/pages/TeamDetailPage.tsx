@@ -1,4 +1,3 @@
-// src/pages/TeamDetailPage.tsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -17,10 +16,9 @@ export default function TeamDetailPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const slotOrder = [
-    "GK",
-    "DF1","DF2","DF3","DF4",
-    "CM1","CM2","CM3",
-    "FW1","FW2","FW3"
+    "GK", "DF1", "DF2", "DF3", "DF4",
+    "CM1", "CM2", "CM3",
+    "FW1", "FW2", "FW3"
   ];
 
   useEffect(() => {
@@ -38,13 +36,11 @@ export default function TeamDetailPage(): JSX.Element {
 
         const assigned: (Player | null)[] = new Array(slotOrder.length).fill(null);
 
-        // Colocar marcados por coincidencia de posición
         for (const m of marked) {
           const idx = slotOrder.findIndex(s => positionMatchesSlot(m, s) && !assigned[slotOrder.indexOf(s)]);
           if (idx >= 0) assigned[idx] = m;
         }
 
-        // Rellenar por coincidencia desde remaining
         for (let i = 0; i < assigned.length; i++) {
           if (!assigned[i]) {
             const slot = slotOrder[i];
@@ -53,7 +49,6 @@ export default function TeamDetailPage(): JSX.Element {
           }
         }
 
-        // Rellenar con cualquier jugador si quedan huecos
         for (let i = 0; i < assigned.length; i++) {
           if (!assigned[i] && remaining.length > 0) assigned[i] = remaining.shift() ?? null;
         }
@@ -81,20 +76,6 @@ export default function TeamDetailPage(): JSX.Element {
     return false;
   }
 
-  const toggleStarter = async (player: Player) => {
-    try {
-      const updated = { ...player, isStarter: !player.isStarter };
-      await api.put(`/players/${player.id}`, updated);
-      // recargar equipo para recalcular (simple y consistente)
-      const res = await api.get(`/teams/${team?.id}`);
-      setTeam(res.data);
-      window.location.reload();
-    } catch (err) {
-      console.error("Error actualizando jugador:", err);
-      setError("No se pudo actualizar la titularidad.");
-    }
-  };
-
   if (loading) return <div><Menu /><section className="team-detail"><p>Loading...</p></section></div>;
   if (error) return <div><Menu /><section className="team-detail"><p className="error">{error}</p></section></div>;
   if (!team) return <div><Menu /><section className="team-detail"><p>Team not found</p></section></div>;
@@ -108,39 +89,38 @@ export default function TeamDetailPage(): JSX.Element {
             {team.logo && <img src={team.logo} alt={`${team.name} logo`} className="team-detail-logo" />}
             <div>
               <h2>{team.name}</h2>
-              <p>{team.description}</p>
+              <p className="team-description">{team.description}</p>
             </div>
           </div>
           <div className="team-actions">
-            <button className="btn" onClick={() => navigate(`/teams/${team.id}/edit`)}>Edit team</button>
+            <button className="btn" onClick={() => navigate(`/teams/add/${team.id}`)}>Edit team</button>
             <button className="btn btn--gray" onClick={() => navigate("/teams")}>Back</button>
           </div>
         </header>
 
         <div className="formation-and-squad">
           <div className="pitch-vertical">
-            {/* SVG del campo corregido (480 x 880) */}
+            {/* Tu SVG ya está bien hecho, mantenlo */}
             <svg className="pitch-svg" viewBox="0 0 480 880" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-            <rect x="0" y="0" width="480" height="880" fill="#0b6b2f" />
+                <rect x="0" y="0" width="480" height="880" fill="#0b6b2f" />
 
-            <rect x="16" y="16" width="448" height="848" fill="none" stroke="#fff" strokeWidth="4" rx="12" ry="12" />
+                <rect x="16" y="16" width="448" height="848" fill="none" stroke="#fff" strokeWidth="4" rx="12" ry="12" />
 
-            <rect x="56" y="16" width="368" height="120" fill="none" stroke="#fff" strokeWidth="3" />
-            <rect x="56" y="743" width="368" height="120" fill="none" stroke="#fff" strokeWidth="3" />
+                <rect x="56" y="16" width="368" height="120" fill="none" stroke="#fff" strokeWidth="3" />
+                <rect x="56" y="743" width="368" height="120" fill="none" stroke="#fff" strokeWidth="3" />
 
-            <circle cx="240" cy="440" r="44" fill="none" stroke="#fff" strokeWidth="3" />
-            <circle cx="240" cy="440" r="3" fill="#fff" />
+                <circle cx="240" cy="440" r="44" fill="none" stroke="#fff" strokeWidth="3" />
+                <circle cx="240" cy="440" r="3" fill="#fff" />
 
-            <line x1="16" y1="440" x2="465" y2="440" stroke="#fff" strokeWidth="2" />
+                <line x1="16" y1="440" x2="465" y2="440" stroke="#fff" strokeWidth="2" />
 
-            <path d="M16 16 L36 16" stroke="#fff" strokeWidth="2" />
-            <path d="M464 16 L444 16" stroke="#fff" strokeWidth="2" />
-            <path d="M16 864 L36 864" stroke="#fff" strokeWidth="2" />
-            <path d="M464 864 L444 864" stroke="#fff" strokeWidth="2" />
+                <path d="M16 16 L36 16" stroke="#fff" strokeWidth="2" />
+                <path d="M464 16 L444 16" stroke="#fff" strokeWidth="2" />
+                <path d="M16 864 L36 864" stroke="#fff" strokeWidth="2" />
+                <path d="M464 864 L444 864" stroke="#fff" strokeWidth="2" />
 
-            <rect x="200" y="0" width="80" height="16" fill="none" stroke="#fff" strokeWidth="2" />
-            <rect x="200" y="864" width="80" height="16" fill="none" stroke="#fff" strokeWidth="2" />
-
+                <rect x="200" y="0" width="80" height="16" fill="none" stroke="#fff" strokeWidth="2" />
+                <rect x="200" y="864" width="80" height="16" fill="none" stroke="#fff" strokeWidth="2" />
             </svg>
 
             <div className="pitch-overlay-absolute">
@@ -173,7 +153,6 @@ export default function TeamDetailPage(): JSX.Element {
                     <div className="sub-name">{p.name}</div>
                     <div className="sub-pos">{p.positions?.join(" & ")}</div>
                   </div>
-                  <button className="btn btn--small" onClick={() => toggleStarter(p)}>Make starter</button>
                 </li>
               ))}
             </ul>
