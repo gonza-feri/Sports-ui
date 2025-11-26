@@ -72,7 +72,6 @@ export default function TeamsPage() {
               {team.logo && (
                 <img src={team.logo} alt={`${team.name} logo`} className="team-logo" />
               )}
-
               <Link to={`/teams/${String(team.id)}`} className="team-link">
                 <span className="team-name">{team.name}</span>
               </Link>

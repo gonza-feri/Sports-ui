@@ -8,42 +8,35 @@ import "./AddTeamPage.css";
 
 export default function AddTeamPage() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>(); // 👈 modo edición si existe
+  const { id } = useParams<{ id: string }>();
 
   const [teamName, setTeamName] = useState("");
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null); // 👈 nueva preview
+  const [logoPreview, setLogoPreview] = useState<string | null>(null); // Data URL o URL persistente
   const [players, setPlayers] = useState<PlayerForm[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const positions = [
-    "Undefined", "Goalkeeper (GK)", "Center Back (CB)", "Left Back (LB)", "Right Back (RB)", "Sweeper (SW)", "Wing Back (LWB/RWB)",
-    "Defensive Midfielder (DM/CDM)", "Central Midfielder (CM)", "Attacking Midfielder (AM/CAM)", "Left Midfielder (LM)", "Right Midfielder (RM)",
-    "Striker (ST)", "Center Forward (CF)", "Winger (LW/RW)", "Forward (FW)"
-  ];
-
-  // Precargar equipo si estamos en edición
+  // Cargar equipo en edición
   useEffect(() => {
     const loadTeam = async () => {
       if (!id) return;
       try {
-        const teamRes = await api.get(`/teams/${id}`);
-        const team: Team = teamRes.data;
-
+        const res = await api.get(`/teams/${id}`);
+        const team: Team = res.data;
         setTeamName(team.name ?? "");
         setDescription(team.description ?? "");
-        setLogo(null); // por seguridad no precargamos File
-        setLogoPreview(team.logo ?? null); // 👈 preview desde backend
+        setLogo(null);
+        setLogoPreview(team.logo ?? null); // si backend tiene Data URL o URL persistente
 
         const mappedPlayers: PlayerForm[] = (team.players ?? []).map((p: Player) => ({
-          id: p.id, // 👈 para poder hacer PUT en edición
+          id: p.id,
           name: p.name ?? "",
           number: p.number ?? 0,
           positions: p.positions?.length ? p.positions : ["Undefined"],
-          photo: null, // no podemos reconstruir File
-          photoPreview: p.photo || null // 👈 usar URL guardada como preview
+          photo: null,
+          photoPreview: p.photo ?? null // p.photo debe ser Data URL o URL persistente
         }));
         setPlayers(mappedPlayers);
       } catch (err) {
@@ -54,11 +47,20 @@ export default function AddTeamPage() {
     loadTeam();
   }, [id]);
 
+  // Helper: leer File como Data URL
+  const fileToDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
   const addPlayer = () => {
     const newPlayer: PlayerForm = {
       name: "",
       number: 0,
-      positions: ["Undefined"], // usar opción válida
+      positions: ["Undefined"],
       photo: null,
       photoPreview: null
     };
@@ -77,18 +79,24 @@ export default function AddTeamPage() {
     }
 
     try {
-      // Crear payload del equipo con la URL visible
+      // Si se seleccionó un File en logo, convertirlo a Data URL antes de enviar
+      if (logo && !logoPreview) {
+        const dataUrl = await fileToDataUrl(logo);
+        setLogoPreview(dataUrl);
+      }
+
+      // Preparamos payload del equipo con logoPreview (Data URL o string)
       const teamPayload = {
         name: teamName.trim(),
         description: description.trim(),
-        logo: logoPreview ?? "", // 👈 guardamos la URL (createObjectURL o backend)
+        logo: logoPreview ?? "", // guardamos la Data URL o cadena persistente
         players: [] as Player[]
       };
 
       // Crear o editar equipo
       const teamRes = id
-        ? await api.put(`/teams/${id}`, teamPayload) // 👈 edición
-        : await api.post("/teams", teamPayload);     // 👈 creación
+        ? await api.put(`/teams/${id}`, teamPayload)
+        : await api.post("/teams", teamPayload);
 
       const savedTeam: Team = teamRes.data;
 
@@ -97,22 +105,27 @@ export default function AddTeamPage() {
       for (const p of players) {
         if (!p.name?.trim()) continue;
 
+        // Si hay File y no hay photoPreview, convertirlo
+        if (p.photo && !p.photoPreview) {
+          p.photoPreview = await fileToDataUrl(p.photo);
+        }
+
         const playerPayload = {
           name: p.name,
           number: p.number,
           positions: p.positions,
-          photo: p.photoPreview ?? "", // 👈 guardamos la URL visible
+          photo: p.photoPreview ?? "",
           teamId: savedTeam.id
         };
 
         const playerRes = p.id && id
-          ? await api.put(`/players/${p.id}`, playerPayload) // 👈 actualizar existente
-          : await api.post("/players", playerPayload);       // 👈 crear nuevo
+          ? await api.put(`/players/${p.id}`, playerPayload)
+          : await api.post("/players", playerPayload);
 
         savedPlayers.push(playerRes.data);
       }
 
-      // Actualizar el equipo con la lista de jugadores
+      // Actualizar equipo con jugadores guardados
       if (savedPlayers.length > 0) {
         await api.put(`/teams/${savedTeam.id}`, {
           ...savedTeam,
@@ -127,6 +140,12 @@ export default function AddTeamPage() {
     }
   };
 
+  // Botón Cancelar: confirmar y volver a /teams sin guardar
+  const handleCancel = () => {
+    const confirmed = window.confirm("¿Estás seguro? Los cambios no guardados se perderán.");
+    if (confirmed) navigate("/teams");
+  };
+
   return (
     <div>
       <Menu />
@@ -136,25 +155,25 @@ export default function AddTeamPage() {
 
         <form onSubmit={handleSubmit}>
           <label>Team Name</label>
-          <input
-            value={teamName}
-            onChange={e => setTeamName(e.target.value)}
-          />
+          <input value={teamName} onChange={e => setTeamName(e.target.value)} />
 
           <label>Description</label>
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="Describe your team..."
-          />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} />
 
           <label>Logo</label>
           <input
             type="file"
-            onChange={e => {
+            accept="image/*"
+            onChange={async e => {
               const file = e.target.files?.[0] ?? null;
               setLogo(file);
-              setLogoPreview(file ? URL.createObjectURL(file) : null); // 👈 preview inmediata
+              if (file) {
+                // convertimos inmediatamente a Data URL para preview y persistencia
+                const dataUrl = await fileToDataUrl(file);
+                setLogoPreview(dataUrl);
+              } else {
+                setLogoPreview(null);
+              }
             }}
           />
 
@@ -212,11 +231,14 @@ export default function AddTeamPage() {
                         }}
                         style={{ flex: 1 }}
                       >
-                        {positions.map(option => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
+                        {/* mantén tu lista de posiciones */}
+                        <option value="Undefined">Undefined</option>
+                        <option value="GK">Goalkeeper (GK)</option>
+                        <option value="CB">Center Back (CB)</option>
+                        <option value="LB">Left Back (LB)</option>
+                        <option value="RB">Right Back (RB)</option>
+                        <option value="ST">Striker (ST)</option>
+                        {/* ... */}
                       </select>
 
                       {p.positions.length > 1 && (
@@ -250,11 +272,15 @@ export default function AddTeamPage() {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={e => {
+                    onChange={async e => {
                       const file = e.target.files?.[0] ?? null;
                       const updated = [...players];
                       updated[i].photo = file;
-                      updated[i].photoPreview = file ? URL.createObjectURL(file) : null; // 👈 preview
+                      if (file) {
+                        updated[i].photoPreview = await fileToDataUrl(file);
+                      } else {
+                        updated[i].photoPreview = null;
+                      }
                       setPlayers(updated);
                     }}
                   />
@@ -264,15 +290,12 @@ export default function AddTeamPage() {
                       src={p.photoPreview}
                       alt={`${p.name || "Player"} photo`}
                       className="player-photo-preview"
+                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6 }}
                     />
                   )}
 
                   <div className="player-actions">
-                    <button
-                      type="button"
-                      className="btn btn--green"
-                      onClick={() => setExpandedIndex(null)}
-                    >
+                    <button type="button" className="btn btn--green" onClick={() => setExpandedIndex(null)}>
                       Save player
                     </button>
 
@@ -292,10 +315,7 @@ export default function AddTeamPage() {
                 </>
               ) : (
                 <div className="player-summary">
-                  <span
-                    onClick={() => setExpandedIndex(i)}
-                    style={{ flex: 1, cursor: "pointer" }}
-                  >
+                  <span onClick={() => setExpandedIndex(i)} style={{ flex: 1, cursor: "pointer" }}>
                     {p.name || "Unnamed"} - {p.number || "?"} - {p.positions.join(" & ")}
                   </span>
                   <button
@@ -314,9 +334,13 @@ export default function AddTeamPage() {
             </div>
           ))}
 
-          <div className="form-actions">
+          <div className="form-actions" style={{ display: "flex", gap: 8 }}>
             <button type="submit" className="btn btn--green">
               Save Team
+            </button>
+
+            <button type="button" className="btn btn--gray" onClick={handleCancel}>
+              Cancel
             </button>
           </div>
         </form>

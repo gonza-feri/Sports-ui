@@ -22,5 +22,5 @@ export type PlayerForm = {
   number: number;
   positions: string[];
   photo: File | null;
-  photoPreview?: string | null;
+  photoPreview?: string | null; // Data URL o URL persistente
 };
