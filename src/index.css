@@ -30,6 +30,7 @@ body {
 
 /* Tarjeta */
 .team-card {
+  position: relative;
   background: var(--color-card, #1E1E2F);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.35);
@@ -37,9 +38,12 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.team-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+.team-card.menu-open {
+  pointer-events: none; 
+}
+
+.team-card.menu-open .menu-dropdown {
+  pointer-events: auto; 
 }
 
 /* Contenido interno: nombre a la izquierda, acciones a la derecha */
@@ -90,15 +94,26 @@ body {
   position: absolute;
   right: 0;
   top: 100%;
-  z-index: 1000; /* 👈 prioridad alta */
-  background: #222; /* 👈 fondo sólido para bloquear clics */
+  z-index: 9999;
+  background: #222;
   border: 1px solid #444;
   border-radius: 6px;
   min-width: 160px;
   padding: 0.2rem 0;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  pointer-events: auto; /* 👈 asegura que el menú reciba los clics */
 }
+
+.team-card:hover {
+  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.team-card.menu-open:hover {
+  transform: none;
+  background: none;
+}
+
 
 .menu-item {
   width: 100%;

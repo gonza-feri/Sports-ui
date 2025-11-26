@@ -1,82 +1,40 @@
 {
   "teams": [
     {
-      "id": "1",
-      "name": "FC Dream",
-      "description": "Un equipo de ensueño",
-      "logo": "https://via.placeholder.com/100x100.png?text=FC+Dream",
+      "id": "ddac",
+      "name": "Paula G FC",
+      "description": "",
+      "logo": "blob:http://localhost:5173/022952c4-b111-49de-b74f-1f752afc2f30",
       "players": [
         {
-          "id": 1,
-          "teamId": 1,
-          "name": "Leo",
-          "number": "10",
-          "position": "Forward",
-          "image": "https://via.placeholder.com/80x80.png?text=Leo"
-        },
-        {
-          "id": 2,
-          "teamId": 1,
-          "name": "Max",
-          "number": "8",
-          "position": "Midfielder",
-          "image": "https://via.placeholder.com/80x80.png?text=Max"
+          "id": "a332",
+          "name": "Gonzalo",
+          "number": 7,
+          "positions": [
+            "Winger (LW/RW)",
+            "Left Midfielder (LM)"
+          ],
+          "photo": "blob:http://localhost:5173/9312eb79-1d43-4f29-b204-76b7a714942c",
+          "teamId": "ddac"
         }
       ]
     },
     {
-      "id": "2",
-      "name": "United Mockers",
-      "description": "Equipo de prueba",
-      "logo": "https://via.placeholder.com/100x100.png?text=Mockers",
-      "players": [
-        {
-          "id": 3,
-          "teamId": 2,
-          "name": "Sara",
-          "number": "7",
-          "position": "Defender",
-          "image": "https://via.placeholder.com/80x80.png?text=Sara"
-        }
-      ]
-    },
-    {
-      "name": "Paura FC",
+      "id": "e57f",
+      "name": "Paula OG FC",
       "description": "",
-      "logo": "blob:http://localhost:5173/61ddbfa2-5c28-4d9b-93ef-28d1f91f4e6b",
+      "logo": "blob:http://localhost:5173/ab6a12be-19b1-4a15-9b3a-92e39dc75649",
       "players": [
         {
-          "name": "Leo Messi",
+          "id": "df2a",
+          "name": "Pepe",
           "number": 10,
           "positions": [
-            "Winger (LW/RW)",
-            "Left Midfielder (LM)",
-            "Left Back (LB)"
+            "Right Midfielder (RM)",
+            "Goalkeeper (GK)"
           ],
-          "photo": "ronaldo.avif",
-          "teamId": "4e0d",
-          "id": "2564"
-        }
-      ],
-      "id": "4e0d"
-    },
-    {
-      "id": "3c89",
-      "name": "Paura FC",
-      "description": "",
-      "logo": "FC_Barcelona_(crest).svg.webp",
-      "players": [
-        {
-          "id": "99be",
-          "name": "Leo Messi",
-          "number": 10,
-          "positions": [
-            "Winger (LW/RW)",
-            "Left Midfielder (LM)",
-            "Left Back (LB)"
-          ],
-          "photo": "",
-          "teamId": "3c89"
+          "photo": "blob:http://localhost:5173/fcc73e54-c9c7-4cc8-a96f-8cefa64d2200",
+          "teamId": "e57f"
         }
       ]
     }
@@ -107,28 +65,26 @@
       "image": "https://via.placeholder.com/80x80.png?text=Sara"
     },
     {
-      "name": "Leo Messi",
-      "number": 10,
+      "id": "a332",
+      "name": "Gonzalo",
+      "number": 7,
       "positions": [
         "Winger (LW/RW)",
-        "Left Midfielder (LM)",
-        "Left Back (LB)"
+        "Left Midfielder (LM)"
       ],
-      "photo": "ronaldo.avif",
-      "teamId": "4e0d",
-      "id": "2564"
+      "photo": "blob:http://localhost:5173/9312eb79-1d43-4f29-b204-76b7a714942c",
+      "teamId": "ddac"
     },
     {
-      "id": "99be",
-      "name": "Leo Messi",
+      "id": "df2a",
+      "name": "Pepe",
       "number": 10,
       "positions": [
-        "Winger (LW/RW)",
-        "Left Midfielder (LM)",
-        "Left Back (LB)"
+        "Right Midfielder (RM)",
+        "Goalkeeper (GK)"
       ],
-      "photo": "",
-      "teamId": "3c89"
+      "photo": "blob:http://localhost:5173/fcc73e54-c9c7-4cc8-a96f-8cefa64d2200",
+      "teamId": "e57f"
     }
   ]
 }

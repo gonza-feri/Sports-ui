@@ -9,6 +9,21 @@ export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const menuElements = document.querySelectorAll(".menu-dropdown");
+      const clickedInsideMenu = Array.from(menuElements).some(el => el.contains(e.target as Node));
+      if (!clickedInsideMenu) {
+        setOpenMenu(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,7 +67,7 @@ export default function TeamsPage() {
 
       <ul className="team-list">
         {teams.map((team) => (
-          <li key={team.id} className="team-card">
+          <li key={team.id} className={`team-card ${openMenu === team.id ? "menu-open" : ""}`}>
             <div className="card-content team-row">
               {team.logo && (
                 <img src={team.logo} alt={`${team.name} logo`} className="team-logo" />
