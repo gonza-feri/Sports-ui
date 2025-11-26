@@ -1,3 +1,4 @@
+// src/pages/AddTeamPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
@@ -7,12 +8,12 @@ import "./AddTeamPage.css";
 
 export default function AddTeamPage() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>(); // 👈 detectar modo edición
+  const { id } = useParams<{ id: string }>(); // 👈 modo edición si existe
 
   const [teamName, setTeamName] = useState("");
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null); // 👈 nueva preview
   const [players, setPlayers] = useState<PlayerForm[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
@@ -23,9 +24,9 @@ export default function AddTeamPage() {
     "Striker (ST)", "Center Forward (CF)", "Winger (LW/RW)", "Forward (FW)"
   ];
 
-  // 👇 cargar datos si estamos editando
+  // Precargar equipo si estamos en edición
   useEffect(() => {
-    const fetchTeam = async () => {
+    const loadTeam = async () => {
       if (!id) return;
       try {
         const teamRes = await api.get(`/teams/${id}`);
@@ -33,13 +34,16 @@ export default function AddTeamPage() {
 
         setTeamName(team.name ?? "");
         setDescription(team.description ?? "");
+        setLogo(null); // por seguridad no precargamos File
+        setLogoPreview(team.logo ?? null); // 👈 preview desde backend
 
-        // Mapeo mínimo a PlayerForm (sin tocar tipos): posiciones del backend o "Undefined"
-        const mappedPlayers: PlayerForm[] = (team.players || []).map((p: Player) => ({
+        const mappedPlayers: PlayerForm[] = (team.players ?? []).map((p: Player) => ({
+          id: p.id, // 👈 para poder hacer PUT en edición
           name: p.name ?? "",
           number: p.number ?? 0,
           positions: p.positions?.length ? p.positions : ["Undefined"],
-          photo: null // si guardas URL en backend, aquí podrías mostrarla en otro campo si lo necesitas
+          photo: null, // no podemos reconstruir File
+          photoPreview: p.photo || null // 👈 usar URL guardada como preview
         }));
         setPlayers(mappedPlayers);
       } catch (err) {
@@ -47,17 +51,17 @@ export default function AddTeamPage() {
         setError("No se pudo cargar el equipo.");
       }
     };
-    fetchTeam();
+    loadTeam();
   }, [id]);
 
   const addPlayer = () => {
     const newPlayer: PlayerForm = {
       name: "",
       number: 0,
-      positions: ["Undefined"], // ✅ usar tu array, no string vacío
-      photo: null
+      positions: ["Undefined"], // usar opción válida
+      photo: null,
+      photoPreview: null
     };
-
     const updated = [...players, newPlayer];
     setPlayers(updated);
     setExpandedIndex(updated.length - 1);
@@ -73,37 +77,49 @@ export default function AddTeamPage() {
     }
 
     try {
-      const teamRes = await api.post("/teams", {
+      // Crear payload del equipo con la URL visible
+      const teamPayload = {
         name: teamName.trim(),
         description: description.trim(),
-        logo: logoPreview ?? "",   // 👈 guardamos la URL temporal
-        players: []
-      });
-      const createdTeam = teamRes.data;
+        logo: logoPreview ?? "", // 👈 guardamos la URL (createObjectURL o backend)
+        players: [] as Player[]
+      };
 
-      // 2) Crear jugadores (si tienen nombre)
-      const createdPlayers: Player[] = [];
+      // Crear o editar equipo
+      const teamRes = id
+        ? await api.put(`/teams/${id}`, teamPayload) // 👈 edición
+        : await api.post("/teams", teamPayload);     // 👈 creación
+
+      const savedTeam: Team = teamRes.data;
+
+      // Crear/actualizar jugadores
+      const savedPlayers: Player[] = [];
       for (const p of players) {
         if (!p.name?.trim()) continue;
-        const playerRes = await api.post("/players", {
+
+        const playerPayload = {
           name: p.name,
           number: p.number,
           positions: p.positions,
-          photo: p.photo ? p.photo.name : "",
-          teamId: createdTeam.id
-        });
-        createdPlayers.push(playerRes.data);
+          photo: p.photoPreview ?? "", // 👈 guardamos la URL visible
+          teamId: savedTeam.id
+        };
+
+        const playerRes = p.id && id
+          ? await api.put(`/players/${p.id}`, playerPayload) // 👈 actualizar existente
+          : await api.post("/players", playerPayload);       // 👈 crear nuevo
+
+        savedPlayers.push(playerRes.data);
       }
 
-      // 3) Actualizar equipo con jugadores embebidos
-      if (createdPlayers.length > 0) {
-        await api.put(`/teams/${createdTeam.id}`, {
-          ...createdTeam,
-          players: createdPlayers
+      // Actualizar el equipo con la lista de jugadores
+      if (savedPlayers.length > 0) {
+        await api.put(`/teams/${savedTeam.id}`, {
+          ...savedTeam,
+          players: savedPlayers
         });
       }
 
-      // 4) Redirigir a /teams
       navigate("/teams");
     } catch (err) {
       console.error("Error al guardar equipo:", err);
@@ -138,7 +154,7 @@ export default function AddTeamPage() {
             onChange={e => {
               const file = e.target.files?.[0] ?? null;
               setLogo(file);
-              setLogoPreview(file ? URL.createObjectURL(file) : null);
+              setLogoPreview(file ? URL.createObjectURL(file) : null); // 👈 preview inmediata
             }}
           />
 
@@ -160,7 +176,7 @@ export default function AddTeamPage() {
           </div>
 
           {players.map((p, i) => (
-            <div key={i} className="player-form">
+            <div key={p.id ?? i} className="player-form">
               {expandedIndex === i ? (
                 <>
                   <label>Name</label>
@@ -238,13 +254,14 @@ export default function AddTeamPage() {
                       const file = e.target.files?.[0] ?? null;
                       const updated = [...players];
                       updated[i].photo = file;
+                      updated[i].photoPreview = file ? URL.createObjectURL(file) : null; // 👈 preview
                       setPlayers(updated);
                     }}
                   />
 
-                  {p.photo && (
+                  {p.photoPreview && (
                     <img
-                      src={URL.createObjectURL(p.photo)}
+                      src={p.photoPreview}
                       alt={`${p.name || "Player"} photo`}
                       className="player-photo-preview"
                     />

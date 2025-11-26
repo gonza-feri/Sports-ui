@@ -41,13 +41,11 @@
       ]
     },
     {
-      "id": "4e0d",
       "name": "Paura FC",
       "description": "",
-      "logo": "FC_Barcelona_(crest).svg.webp",
+      "logo": "blob:http://localhost:5173/61ddbfa2-5c28-4d9b-93ef-28d1f91f4e6b",
       "players": [
         {
-          "id": "2564",
           "name": "Leo Messi",
           "number": 10,
           "positions": [
@@ -56,9 +54,11 @@
             "Left Back (LB)"
           ],
           "photo": "ronaldo.avif",
-          "teamId": "4e0d"
+          "teamId": "4e0d",
+          "id": "2564"
         }
-      ]
+      ],
+      "id": "4e0d"
     },
     {
       "id": "3c89",
@@ -77,66 +77,6 @@
           ],
           "photo": "",
           "teamId": "3c89"
-        }
-      ]
-    },
-    {
-      "id": "ce04",
-      "name": "Paura FC",
-      "description": "",
-      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
-      "players": [
-        {
-          "id": "54ca",
-          "name": "Leo Messi",
-          "number": 10,
-          "positions": [
-            "Winger (LW/RW)",
-            "Left Midfielder (LM)",
-            "Left Back (LB)"
-          ],
-          "photo": "",
-          "teamId": "ce04"
-        }
-      ]
-    },
-    {
-      "id": "e14d",
-      "name": "Paura FC",
-      "description": "",
-      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
-      "players": [
-        {
-          "id": "7c72",
-          "name": "Leo Messi",
-          "number": 10,
-          "positions": [
-            "Winger (LW/RW)",
-            "Left Midfielder (LM)",
-            "Left Back (LB)"
-          ],
-          "photo": "ronaldo.avif",
-          "teamId": "e14d"
-        }
-      ]
-    },
-    {
-      "id": "9d6b",
-      "name": "Paura FC",
-      "description": "",
-      "logo": "blob:http://localhost:5173/90ebf0ec-669b-46e0-8380-72f4936ca1e5",
-      "players": [
-        {
-          "id": "77d1",
-          "name": "Leo Messi",
-          "number": 10,
-          "positions": [
-            "Winger (LW/RW)",
-            "Left Midfielder (LM)",
-            "Left Back (LB)"
-          ],
-          "photo": "",
-          "teamId": "9d6b"
         }
       ]
     }
@@ -167,7 +107,6 @@
       "image": "https://via.placeholder.com/80x80.png?text=Sara"
     },
     {
-      "id": "2564",
       "name": "Leo Messi",
       "number": 10,
       "positions": [
@@ -176,7 +115,8 @@
         "Left Back (LB)"
       ],
       "photo": "ronaldo.avif",
-      "teamId": "4e0d"
+      "teamId": "4e0d",
+      "id": "2564"
     },
     {
       "id": "99be",
@@ -189,42 +129,6 @@
       ],
       "photo": "",
       "teamId": "3c89"
-    },
-    {
-      "id": "54ca",
-      "name": "Leo Messi",
-      "number": 10,
-      "positions": [
-        "Winger (LW/RW)",
-        "Left Midfielder (LM)",
-        "Left Back (LB)"
-      ],
-      "photo": "",
-      "teamId": "ce04"
-    },
-    {
-      "id": "7c72",
-      "name": "Leo Messi",
-      "number": 10,
-      "positions": [
-        "Winger (LW/RW)",
-        "Left Midfielder (LM)",
-        "Left Back (LB)"
-      ],
-      "photo": "ronaldo.avif",
-      "teamId": "e14d"
-    },
-    {
-      "id": "77d1",
-      "name": "Leo Messi",
-      "number": 10,
-      "positions": [
-        "Winger (LW/RW)",
-        "Left Midfielder (LM)",
-        "Left Back (LB)"
-      ],
-      "photo": "",
-      "teamId": "9d6b"
     }
   ]
 }
