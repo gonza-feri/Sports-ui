@@ -36,8 +36,7 @@ export default function AddTeamPage() {
           number: p.number ?? 0,
           positions: p.positions?.length ? p.positions : ["Undefined"],
           photo: null,
-          photoPreview: p.photo ?? null,
-          isStarter: !!p.isStarter
+          photoPreview: p.photo ?? null // p.photo debe ser Data URL o URL persistente
         }));
         setPlayers(mappedPlayers);
       } catch (err) {
@@ -63,12 +62,11 @@ export default function AddTeamPage() {
       number: 0,
       positions: ["Undefined"],
       photo: null,
-      photoPreview: null,
-      isStarter: false
+      photoPreview: null
     };
-    const updated = [newPlayer, ...players];
+    const updated = [...players, newPlayer];
     setPlayers(updated);
-    setExpandedIndex(0);
+    setExpandedIndex(updated.length - 1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,8 +115,7 @@ export default function AddTeamPage() {
           number: p.number,
           positions: p.positions,
           photo: p.photoPreview ?? "",
-          teamId: savedTeam.id,
-          isStarter: !!p.isStarter
+          teamId: savedTeam.id
         };
 
         const playerRes = p.id && id
@@ -295,19 +292,6 @@ export default function AddTeamPage() {
                       setPlayers(updated);
                     }}
                   />
-
-                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!p.isStarter}
-                      onChange={e => {
-                        const updated = [...players];
-                        updated[i].isStarter = e.target.checked;
-                        setPlayers(updated);
-                      }}
-                    />
-                    Starter
-                  </label>
 
                   {p.photoPreview && (
                     <img

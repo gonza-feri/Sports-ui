@@ -246,3 +246,9 @@
   justify-content: center;
   margin-top: 3rem;
 }
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
