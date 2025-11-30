@@ -16,7 +16,7 @@ export type PlayerForm = {
   number: number;
   positions: string[];
   photo: File | null;
-  photoPreview?: string | null;
+  photoPreview?: string | null;   // <-- permitir null
   isStarter?: boolean;
   positionSlot?: string | null;
 };
@@ -24,7 +24,7 @@ export type PlayerForm = {
 export type Team = {
   id: number;
   name: string;
-  logo?: string;
+  logo?: string | null;           // <-- permitir null
   description?: string;
   players?: Player[];
   formation?: string;

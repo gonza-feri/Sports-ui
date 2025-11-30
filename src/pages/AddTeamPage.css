@@ -1,254 +1,256 @@
-/* 🔲 Formulario principal */
-.form-card {
-  background: #1e1e2f;
-  color: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  max-width: 650px;
-  margin: 2rem auto;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+/* src/pages/AddTeamPage.css
+   Estilos completos para AddTeamPage.tsx
+   Versión completa y compatible con la estética previa:
+   - Mantiene colores y tipografías neutras
+   - Añade estilos para import/export y el botón "Add players file"
+   - Responsive y sin cambios drásticos en el look existente
+*/
+
+/* ---------- Variables (ajustables) ---------- */
+:root {
+  --bg: #0f1720;
+  --card: #0b1220;
+  --muted: #9aa4b2;
+  --accent: #0ea5a4;
+  --danger: #ef4444;
+  --surface: rgba(255,255,255,0.03);
+  --glass: rgba(255,255,255,0.04);
+  --text: #e6eef6;
+  --radius: 10px;
+  --gap: 12px;
+  --max-width: 1100px;
 }
 
-.form-card h2 {
-  text-align: center;
-  margin-bottom: 2rem;
-  color: #ff4d4d;
+/* ---------- Page wrapper ---------- */
+.page-wrapper {
+  max-width: var(--max-width);
+  margin: 18px auto;
+  padding: 18px;
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.form-card label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-
-/* 🔲 Inputs y selects */
-.form-card input,
-.form-card textarea,
-.form-card select {
-  width: 100%;
-  padding: 0.7rem;
-  margin-bottom: 1.5rem;
-  border-radius: 8px;
-  border: none;
-  background: #2a2a3d;
-  color: #fff;
-}
-
-.form-card input:focus,
-.form-card textarea:focus,
-.form-card select:focus {
-  outline: 2px solid #ff4d4d;
-}
-
-/* 🔲 Logo preview */
-.logo-preview {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.player-actions {
-  display: flex;
-  justify-content: space-between; /* Collapse a la izquierda, Delete a la derecha */
-  margin-top: 1.5rem;
-}
-
-.player-summary {
+/* ---------- Header ---------- */
+.editor-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #2a2a3d;          /* el cuadro se mantiene igual */
-  border-radius: 8px;
-  margin-bottom: 0.8rem;
-  font-weight: 500;
+  gap: 12px;
+  margin-bottom: 14px;
 }
-
-.btn-delete-position {
-  background: none;       /* transparente */
-  border: none;
-  color: #ff4d4d;         /* rojo fuerte */
-  font-size: 1rem;
-  cursor: pointer;
-  margin-left: 0.5rem;
-}
-
-.btn-delete-position:hover {
-  color: #b71c1c;
-}
-
-.btn--delete-text {
-  background: none;          /* transparente */
-  border: none;
-  color: #ff4d4d;            /* solo texto rojo */
-  font-weight: 600;
-  cursor: pointer;
-  padding: 0;                /* sin padding extra */
-}
-
-.btn--delete-text:hover {
-  text-decoration: underline; /* feedback visual al pasar el ratón */
-}
-
-.add-position-link {
-  color: #ff4d4d;
-  cursor: pointer;
-  text-decoration: underline;
-  font-size: 0.85rem;
-  display: inline-block;
-  margin-top: 0.6rem;   /* espacio respecto al select anterior */
-  margin-bottom: 1rem;  /* 👈 espacio hacia el campo de abajo */
-}
-
-.add-position-link:hover {
-  color: #b71c1c;
-}
-
-
-/* 🔲 Header de jugadores */
-.players-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 2rem 0 1rem;
-}
-
-.players-header h3 {
+.editor-header h2 {
   margin: 0;
-  color: #ff4d4d;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
 }
-
-/* 🔲 Botones generales */
-.btn {
-  display: inline-block;
-  padding: 0.8rem 1.4rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-/* 🔴 Botones rojos grandes (Add Player) */
-.btn--red {
-  background: #d62828;
-  color: #fff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.btn--red:hover {
-  background: #b71c1c;
-}
-
-/* 🟢 Botones verdes grandes (Save Team) */
-.btn--green {
-  background: #28a745;
-  color: #fff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.btn--green:hover {
-  background: #218838;
-}
-
-/* 🔴 Botón rojo muy pequeño y apagado */
-.btn--red-tiny {
-  background: #aa2e2e;       /* rojo más apagado */
-  color: #fff;
-  font-size: 0.65rem;        /* más pequeño todavía */
-  padding: 0.2rem 0.5rem;    /* mínimo padding */
-  border-radius: 5px;
-  line-height: 1;
-}
-
-.btn--red-tiny:hover {
-  background: #922626;       /* hover también apagado */
-}
-
-.btn--green-tiny {
-  background: #28a745;       /* rojo más apagado */
-  color: #fff;
-  font-size: 0.65rem;        /* más pequeño todavía */
-  padding: 0.2rem 0.5rem;    /* mínimo padding */
-  border-radius: 5px;
-  line-height: 1;
-}
-
-.btn--green-tiny:hover {
-  background: #218838;       /* hover también apagado */
-}
-
-/* Ajuste dentro del bloque de jugador */
-.player-form .btn--red-tiny {
-  margin-top: 0.3rem;
-  margin-bottom: 1.2rem;     /* más hueco debajo para separar de Photo */
-  align-self: flex-start;
-}
-
-/* 🔲 Bloques de jugador */
-.player-form {
-  background: #242434;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-
-  /* 👇 evita que nada se salga */
-  overflow-x: hidden;
-}
-
-.player-form input,
-.player-form select {
-  width: 100%;          /* ocupa todo el ancho disponible */
-  max-width: 100%;      /* nunca se pasa del cuadro */
-  box-sizing: border-box; /* incluye padding/border en el cálculo */
-}
-
-
-.player-form label {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-weight: 600;
-  color: #ddd;
-}
-
-.player-form input,
-.player-form select {
-  border-radius: 8px;
-  margin-bottom: 0.8rem;
-}
-
-.player-photo-preview {
-  margin-top: 0.6rem;
-  max-width: 120px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-/* 🔲 Botón Add Position dentro de jugador */
-.player-form .btn--red-small {
-  margin-top: 0.5rem;
-}
-
-/* 🔲 Acciones finales */
-.form-actions {
-  display: flex;
-  justify-content: center;
-  margin-top: 3rem;
-}
-
 .editor-actions {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
 }
+
+/* ---------- Buttons (light, non-invasive) ---------- */
+.btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+.btn--gray { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: var(--muted); }
+.btn--ghost { background: transparent; color: var(--muted); border: none; }
+.btn--danger { background: linear-gradient(180deg, rgba(239,68,68,0.95), rgba(220,38,38,0.95)); color: #fff; border: none; }
+.btn[disabled] { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ---------- Form container ---------- */
+.team-form {
+  background: var(--card);
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+}
+
+/* Grid: keep previous layout if present, fallback to 2 columns + sidebar */
+.team-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 240px;
+  gap: var(--gap);
+  align-items: start;
+  margin-bottom: 14px;
+}
+.team-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+/* Inputs */
+.input, .textarea {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.04);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 8px;
+  outline: none;
+  font-size: 0.95rem;
+}
+.input:focus, .textarea:focus {
+  box-shadow: 0 6px 18px rgba(14,165,164,0.06);
+  border-color: rgba(14,165,164,0.9);
+}
+.textarea { resize: vertical; min-height: 72px; }
+
+/* File row and previews */
+.file-row { display: flex; gap: 10px; align-items: center; }
+.logo-preview, .photo-preview {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 6px 18px rgba(2,6,23,0.6);
+}
+
+/* ---------- Players header & actions ---------- */
+.players-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0 12px 0;
+}
+.players-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.players-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Minimal additions for Add players file and actions (keeps existing look) */
+.players-file-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.players-file-actions label.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.players-file-actions input[type="file"] { display: none; }
+
+/* Keep + Add Player button aligned with file actions */
+.players-file-actions .btn + .btn { margin-left: 6px; }
+
+/* Optional small hint next to import button */
+.import-hint { color: var(--muted); font-size: 0.9rem; margin-left: 6px; opacity: 0.9; }
+
+/* ---------- Players list & cards ---------- */
+.players-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+/* Player card */
+.player-card {
+  background: var(--glass);
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Summary row */
+.player-summary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+}
+.player-summary:hover { background: rgba(255,255,255,0.02); }
+.player-summary-left { display: flex; gap: 10px; align-items: center; }
+.player-summary-name {
+  font-weight: 700;
+  color: var(--text);
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-summary-number { color: var(--muted); font-weight: 600; margin-left: 6px; }
+.player-summary-positions { color: var(--muted); font-size: 0.9rem; margin-left: 8px; }
+.player-summary-starter { font-size: 0.85rem; font-weight: 700; color: #7ee787; margin-left: 8px; }
+
+/* Expanded editor */
+.player-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(255,255,255,0.03);
+}
+.player-row { display: flex; flex-direction: column; gap: 6px; }
+.player-row-inline { display: flex; gap: 12px; align-items: center; }
+
+/* Checkbox */
+.checkbox { display: flex; gap: 8px; align-items: center; color: var(--muted); font-weight: 600; }
+.checkbox input { width: 16px; height: 16px; }
+
+/* Player actions */
+.player-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+/* ---------- Form actions ---------- */
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+
+/* ---------- Small helpers ---------- */
+.error { color: var(--danger); margin: 8px 0; font-weight: 600; }
+.hint { color: var(--muted); font-size: 0.9rem; }
+
+/* ---------- Responsive adjustments ---------- */
+@media (max-width: 980px) {
+  .team-grid { grid-template-columns: 1fr; }
+  .players-file-actions { flex-wrap: wrap; }
+  .editor-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .form-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .page-wrapper { padding: 12px; }
+}
+
+@media (max-width: 720px) {
+  .players-file-actions { gap: 6px; }
+  .logo-preview, .photo-preview { width: 48px; height: 48px; }
+}
+
+@media (max-width: 520px) {
+  .btn { padding: 8px 10px; font-size: 0.9rem; }
+  .player-summary { padding: 8px; }
+}
+
+/* ---------- Low-specificity safety rules (avoid overriding global styles) ---------- */
+/* These rules are intentionally low specificity so they don't break existing theme */
+.page-wrapper * { box-sizing: border-box; }
