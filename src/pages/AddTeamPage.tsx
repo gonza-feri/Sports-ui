@@ -17,7 +17,7 @@ const POS_OPTIONS = [
   { v: "AM", t: "Attacking Midfielder (AM)" },
   { v: "RW", t: "Right Winger (RW)" },
   { v: "LW", t: "Left Winger (LW)" },
-  { v: "W",  t: "Winger (W)" },
+  { v: "W", t: "Winger (W)" },
   { v: "CF", t: "Centre Forward (CF)" },
   { v: "ST", t: "Striker (ST)" },
 ];
@@ -76,11 +76,7 @@ export default function AddTeamPage(): JSX.Element {
     load();
   }, [id]);
 
-  /* ---------- Helpers de archivos/imagenes ---------- */
-  function isDataUrl(str: string) {
-    return /^data:image\/(png|jpg|jpeg|webp);base64,/.test(str);
-  }
-
+  /* ---------- Helpers: file/image ---------- */
   async function fileToDataUrl(file: File): Promise<string> {
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -90,29 +86,92 @@ export default function AddTeamPage(): JSX.Element {
     });
   }
 
-  async function urlToDataUrl(imageUrl: string): Promise<string> {
-    try {
-      const res = await fetch(imageUrl, { mode: "cors" });
-      const blob = await res.blob();
-      return await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    } catch {
-      return imageUrl;
-    }
+  function svgToBase64DataUrl(svg: string) {
+    const encoded = btoa(unescape(encodeURIComponent(svg)));
+    return `data:image/svg+xml;base64,${encoded}`;
   }
 
-  /* ---------- CSV parsing / util ---------- */
+  function makeInitials(name: string) {
+    if (!name) return "P";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
+  }
+
+  function generatePlayerSvgDataUrl(name: string, colorBg = "#0b1220", colorFg = "#ffffff", size = 128) {
+    const initials = makeInitials(name);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <rect width="100%" height="100%" fill="${colorBg}" rx="${Math.round(size * 0.08)}" />
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${Math.round(size * 0.45)}" fill="${colorFg}" font-weight="700">${initials}</text>
+    </svg>`;
+    return svgToBase64DataUrl(svg);
+  }
+
+  function normalizeDataUrl(raw?: string | null): string | null {
+    if (!raw) return null;
+    let s = String(raw).trim();
+
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+
+    while (s.endsWith(";")) s = s.slice(0, -1);
+
+    // remove whitespace/newlines that can break the URL
+    s = s.replace(/\s+/g, "");
+
+    // if already valid data URL with comma or base64 marker
+    if (/^data:image\/[a-z0-9.+-]+;(base64,|utf8,|,)/i.test(s) || /^data:image\/svg\+xml;base64,/.test(s)) {
+      return s;
+    }
+
+    // if missing comma after ;base64
+    const m = s.match(/^(data:image\/[a-z0-9.+-]+;base64)(.+)$/i);
+    if (m) {
+      return `${m[1]},${m[2]}`;
+    }
+
+    // if looks like raw base64
+    if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) {
+      return `data:image/png;base64,${s}`;
+    }
+
+    // if raw svg content
+    if (s.includes("<svg")) {
+      try {
+        const encoded = btoa(unescape(encodeURIComponent(s)));
+        return `data:image/svg+xml;base64,${encoded}`;
+      } catch {
+        return null;
+      }
+    }
+
+    // http(s) url
+    if (/^https?:\/\//i.test(s)) return s;
+
+    return null;
+  }
+
+  function sanitizePhoto(raw: string): string | null {
+    if (!raw) return null;
+    let s = raw.trim();
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+    while (s.endsWith(";")) s = s.slice(0, -1);
+    // if contains raw svg tags, return encoded svg
+    if (s.includes("<svg")) return svgToBase64DataUrl(s);
+    // if already data:image with comma or ;base64, return as-is (normalize later)
+    if (/^data:image\/[a-z0-9.+-]+;/.test(s) || /^data:image\/svg\+xml,/.test(s)) return s;
+    // if looks like base64 raw
+    if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) return `data:image/png;base64,${s}`;
+    // if http(s)
+    if (/^https?:\/\//.test(s)) return s;
+    return null;
+  }
+
+  /* ---------- CSV parser (supports quoted fields with ;) ---------- */
   function parseCSV(text: string) {
-    // Parseador simple que soporta:
-    // - separador ';'
-    // - campos entre comillas dobles que pueden contener ';' y comas
-    // - escape de comillas con doble comilla ""
     const rows: string[][] = [];
     const lines = text.split(/\r?\n/);
-
     for (const rawLine of lines) {
       if (!rawLine.trim()) continue;
       const cols: string[] = [];
@@ -158,105 +217,6 @@ export default function AddTeamPage(): JSX.Element {
       };
     }).filter(r => r.nombre || r.numero || r.posiciones.length || r.foto);
   }
-
-  function sanitizePhoto(raw: string): string | null {
-    if (!raw) return null;
-
-    // 1) Trim y quitar comillas envolventes si existen
-    let s = raw.trim();
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      s = s.slice(1, -1);
-    }
-
-    // 2) Quitar ; finales accidentales
-    while (s.endsWith(";")) s = s.slice(0, -1);
-
-    // 3) Si es ya una data URL válida, devolverla
-    if (/^data:image\/(png|jpg|jpeg|webp|svg\+xml);/.test(s) || /^data:image\/svg\+xml,/.test(s)) {
-      return s;
-    }
-
-    // 4) Si parece base64 sin prefijo (p.e. empieza por iVBORw0...), añadir prefijo PNG
-    if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) {
-      return `data:image/png;base64,${s}`;
-    }
-
-    // 5) Si es una URL http(s) la devolvemos tal cual (la importación posterior intentará convertirla a base64)
-    if (/^https?:\/\//.test(s)) {
-      return s;
-    }
-
-    // 6) Si contiene 'data:image' pero con caracteres raros (p.e. espacios), encodeURIComponent la parte SVG
-    if (s.startsWith("data:image/svg+xml")) {
-      // normalizar: si contiene '<' '>' etc, encodeURI la parte después de la coma
-      const idx = s.indexOf(",");
-      if (idx > 0) {
-        const head = s.slice(0, idx + 1);
-        const body = s.slice(idx + 1);
-        // si body contiene '<' o '>' o espacios, encodeURIComponent
-        if (/[<>\s]/.test(body)) {
-          return head + encodeURIComponent(body);
-        }
-        return s;
-      }
-    }
-
-    // 7) Si no sabemos qué es, devolver null para no romper el src
-    return null;
-  }
-
-  // Genera un SVG con iniciales y lo devuelve como data:image/svg+xml;base64,...
-  function svgToBase64DataUrl(svg: string) {
-    // encodeURIComponent + unescape para soportar caracteres UTF-8 antes de btoa
-    const encoded = btoa(unescape(encodeURIComponent(svg)));
-    return `data:image/svg+xml;base64,${encoded}`;
-  }
-
-  function makeInitials(name: string) {
-    if (!name) return "";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
-  }
-
-  /**
-   * Genera un placeholder SVG con iniciales.
-   * colorBg: color de fondo (ej. '#A50044' o '#000000')
-   * colorFg: color del texto (ej. '#FFFFFF')
-   */
-  function generatePlayerSvgDataUrl(name: string, colorBg = "#0b1220", colorFg = "#ffffff", size = 128) {
-    const initials = makeInitials(name) || "P";
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <rect width="100%" height="100%" fill="${colorBg}" rx="${Math.round(size * 0.08)}" />
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${Math.round(size * 0.45)}" fill="${colorFg}" font-weight="700">${initials}</text>
-    </svg>`;
-    return svgToBase64DataUrl(svg);
-  }
-
-  function parseBooleanYes(value: string) {
-    if (!value) return false;
-    const v = value.trim().toLowerCase();
-    return ["si", "sí", "yes", "true", "1", "x"].includes(v);
-  }
-
-  function downloadTextFile(text: string, filename: string, mime = "text/csv;charset=utf-8;") {
-    const blob = new Blob([text], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  /* ---------- Team logo ---------- */
-  const handleTeamLogoChange = async (file: File | null) => {
-    if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
-    setTeamLogoPreview(dataUrl);
-  };
 
   /* ---------- Players CRUD ---------- */
   const addPlayer = () => {
@@ -310,7 +270,7 @@ export default function AddTeamPage(): JSX.Element {
     setExpandedIndex(null);
   };
 
-  /* ---------- Import CSV (botón debajo de Players) ---------- */
+  /* ---------- Import CSV (robusto) ---------- */
   const handleImportCSV = async (file: File) => {
     try {
       const text = await file.text();
@@ -319,50 +279,47 @@ export default function AddTeamPage(): JSX.Element {
 
       const imported: PlayerForm[] = [];
       for (const row of rows) {
-        // intenta sanear la foto si viene en CSV
-        let photoPreview = sanitizePhoto ? sanitizePhoto(row.foto) : (row.foto ?? "");
+        let photoPreview = sanitizePhoto(row.foto);
 
-        // Si photoPreview es null/empty o inválida, generamos un SVG único por jugador
+        // If it's an http(s) URL, try to fetch and convert to dataURL (fallback to generated SVG)
+        if (photoPreview && /^https?:\/\//.test(photoPreview)) {
+          try {
+            const res = await fetch(photoPreview, { mode: "cors" });
+            if (res.ok) {
+              const blob = await res.blob();
+              photoPreview = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            } else {
+              photoPreview = null;
+            }
+          } catch (err) {
+            console.warn("fetch->dataURL failed:", err);
+            photoPreview = null;
+          }
+        }
+
+        // If still no valid photo, generate a unique SVG data URL per player
         if (!photoPreview) {
-          // elige color por equipo (ejemplo: Real Madrid -> blanco/negro; Barça -> azul/grana)
-          // aquí puedes decidir el color según un parámetro o por defecto
-          const teamColorBg = id && id.toString().toLowerCase().includes("barca") ? "#A50044" : "#000000";
+          // choose team color by team id or default
+          const teamColorBg = id && id.toString().toLowerCase().includes("barca") ? "#A50044" : "#0b1220";
           const teamColorFg = id && id.toString().toLowerCase().includes("barca") ? "#FFD400" : "#ffffff";
           photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player", teamColorBg, teamColorFg);
         } else {
-          // si es URL http(s) intentamos convertir a dataURL (mantén tu lógica actual)
-          if (/^https?:\/\//.test(photoPreview)) {
-            try {
-              const res = await fetch(photoPreview, { mode: "cors" });
-              if (res.ok) {
-                const blob = await res.blob();
-                photoPreview = await new Promise<string>((resolve) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result as string);
-                  reader.readAsDataURL(blob);
-                });
-              } else {
-                // si falla, generamos SVG en su lugar
-                photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player");
-              }
-            } catch (err) {
-              // CORS u otro error: generamos SVG en su lugar
-              console.warn("No se pudo convertir URL a dataURL:", photoPreview, err);
-              photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player");
-            }
-          } else {
-            // si es data:image/... pero no contiene 'base64,' o está mal, intenta normalizar
-            if (!/^data:image\/(png|jpg|jpeg|webp|svg\+xml);/.test(photoPreview) && !/^data:image\/svg\+xml;base64,/.test(photoPreview)) {
-              // si parece ser un SVG sin codificar (contiene '<'), lo codificamos
-              if (photoPreview.includes("<") || photoPreview.includes(">")) {
-                photoPreview = svgToBase64DataUrl(photoPreview);
-              } else {
-                // si no sabemos, generamos SVG
-                photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player");
-              }
-            }
+          // normalize if it's a data URL or raw svg
+          const normalized = normalizeDataUrl(photoPreview);
+          if (normalized) photoPreview = normalized;
+          else {
+            // fallback to generated svg if normalization fails
+            photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player");
           }
         }
+
+        // Debug log to inspect values during import
+        // eslint-disable-next-line no-console
+        console.log("Import row:", { nombre: row.nombre, rawFoto: row.foto, photoPreview: photoPreview?.slice(0, 120) });
 
         imported.push({
           id: undefined,
@@ -370,8 +327,8 @@ export default function AddTeamPage(): JSX.Element {
           number: parseInt(row.numero) || 0,
           positions: row.posiciones ?? [],
           photo: null,
-          photoPreview, // cada jugador recibe su propia cadena
-          isStarter: parseBooleanYes(row.titular),
+          photoPreview,
+          isStarter: ["si", "sí", "yes", "true", "1", "x"].includes((row.titular || "").trim().toLowerCase()),
           positionSlot: null,
         });
       }
@@ -390,15 +347,24 @@ export default function AddTeamPage(): JSX.Element {
   const handleExportCSV = () => {
     const header = "nombre;número;posiciones;titular;foto";
     const lines = players.map(p => {
-      const nombre = (p.name ?? "").replace(/;/g, ",");
+      const nombre = (p.name ?? "").replace(/"/g, '""'); // escapar comillas
       const numero = String(p.number ?? 0);
-      const posiciones = (p.positions ?? []).join(",").replace(/;/g, ",");
+      const posiciones = (p.positions ?? []).join(",").replace(/"/g, '""');
       const titular = p.isStarter ? "si" : "";
-      const foto = (p.photoPreview ?? "").replace(/;/g, ",");
-      return `${nombre};${numero};${posiciones};${titular};${foto}`;
+      const foto = (p.photoPreview ?? "").replace(/"/g, '""'); // escapar comillas
+      // ponemos la foto entre comillas para que el parser no la rompa
+      return `${nombre};${numero};${posiciones};${titular};"${foto}"`;
     });
     const csv = [header, ...lines].join("\n");
-    downloadTextFile(csv, "jugadores.csv");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "jugadores.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   /* ---------- Submit (guardar equipo y jugadores) ---------- */
@@ -496,19 +462,17 @@ export default function AddTeamPage(): JSX.Element {
             <div className="team-block">
               <label className="label">Logo</label>
               <div className="file-row">
-                <input type="file" accept="image/*" onChange={(e) => handleTeamLogoChange(e.target.files?.[0] ?? null)} />
-                {teamLogoPreview && <img src={teamLogoPreview} alt="Logo preview" className="logo-preview" />}
+                <input type="file" accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) fileToDataUrl(f).then(setTeamLogoPreview); }} />
+                {teamLogoPreview && <img src={normalizeDataUrl(teamLogoPreview) ?? undefined} alt="Logo preview" className="logo-preview" />}
               </div>
             </div>
           </div>
 
           <div className="players-header">
             <div className="players-header-row">
-              {/* Left: título + Add players file */}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <h3>Players ({players.length})</h3>
 
-                {/* Add players file pegado al título */}
                 <label className="btn btn--gray" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}>
                   Add players file
                   <input
@@ -524,7 +488,6 @@ export default function AddTeamPage(): JSX.Element {
                 </label>
               </div>
 
-              {/* Right: + Add Player */}
               <div>
                 <button type="button" className="btn" onClick={addPlayer}>+ Add Player</button>
               </div>
@@ -557,7 +520,6 @@ export default function AddTeamPage(): JSX.Element {
                       <input className="input" type="number" value={p.number} onChange={(e) => updatePlayerField(i, "number", Number(e.target.value))} placeholder="7" min={0} />
                     </div>
 
-                    {/* Positions selector */}
                     <div className="player-row">
                       <label className="label">Positions</label>
                       <select
@@ -581,7 +543,39 @@ export default function AddTeamPage(): JSX.Element {
                       <label className="label">Photo</label>
                       <div className="file-row">
                         <input type="file" accept="image/*" onChange={(e) => handlePlayerPhotoChange(i, e.target.files?.[0] ?? null)} />
-                        {p.photoPreview && <img src={p.photoPreview} alt="Preview" className="photo-preview" />}
+                        {(() => {
+                          // Aseguramos una data URL final única por jugador
+                          const normalized = normalizeDataUrl(p.photoPreview);
+                          const finalSrc = normalized ?? generatePlayerSvgDataUrl(p.name || `Player ${i}`, "#0b1220", "#ffffff");
+
+                          // Debug temporal (borra después de probar)
+                          // eslint-disable-next-line no-console
+                          console.log("IMG FINAL:", {
+                            idx: i,
+                            name: p.name,
+                            finalStartsWith: finalSrc ? finalSrc.slice(0, 30) : null,
+                            length: finalSrc ? finalSrc.length : 0
+                          });
+
+                          // Forzamos atributos width/height y objectFit para evitar placeholders CSS
+                          return (
+                            <img
+                              key={`player-img-${i}-${p.name?.replace(/\s+/g, "-")}`}
+                              src={finalSrc}
+                              alt={p.name || "Player photo"}
+                              className="photo-preview"
+                              width={56}
+                              height={56}
+                              style={{ objectFit: "cover", display: "inline-block" }}
+                              onError={(e) => {
+                                // Si falla, sustituimos por un SVG generado (no deja la misma imagen vacía)
+                                const target = e.currentTarget as HTMLImageElement;
+                                target.onerror = null;
+                                target.src = generatePlayerSvgDataUrl(p.name || `Player ${i}`, "#0b1220", "#ffffff");
+                              }}
+                            />
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -592,7 +586,6 @@ export default function AddTeamPage(): JSX.Element {
                       </label>
                     </div>
 
-                    {/* Player actions: Save a la izquierda, Delete a la derecha */}
                     <div
                       className="player-actions"
                       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}
