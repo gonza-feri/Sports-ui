@@ -19,6 +19,7 @@
   --radius: 10px;
   --gap: 12px;
   --max-width: 1100px;
+  --top-offset: 0px;
 }
 
 /* ---------- Page wrapper ---------- */
@@ -230,8 +231,74 @@
 /* Player actions */
 .player-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-/* ---------- Form actions ---------- */
-.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
+/* Barra superior */
+.form-top-actions {
+  position: sticky;
+  top: var(--top-offset);
+  z-index: 1200; /* suficientemente alto para estar por encima del contenido, pero si tu banner tiene z-index mayor, ajusta JS para poner --top-offset */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(8,10,14,0.88); /* semitransparente para integrarse con la web */
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  backdrop-filter: blur(6px);
+}
+
+/* contenedores para alinear izquierda/derecha */
+.form-top-left,
+.form-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Botones: tonos apagados */
+.btn-save {
+  background-color: #2f6f4e; /* verde apagado */
+  color: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(47,111,78,0.08);
+}
+.btn-save:hover { filter: brightness(0.98); }
+.btn-save:focus { outline: 3px solid rgba(47,111,78,0.18); outline-offset: 2px; }
+
+/* Back/Cancel: rojo apagado */
+.btn-back {
+  background-color: #9b3f36; /* rojo apagado */
+  color: #ffffff;
+  border: 1px solid rgba(0,0,0,0.12);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(155,63,54,0.08);
+}
+.btn-back:hover { filter: brightness(0.98); }
+.btn-back:focus { outline: 3px solid rgba(155,63,54,0.14); outline-offset: 2px; }
+
+/* Evitar que el contenido quede pegado al sticky bar */
+.page-wrapper { padding-top: 8px; }
+
+/* Responsive: en pantallas pequeñas apilar botones */
+@media (max-width: 640px) {
+  .form-top-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+  .form-top-left, .form-top-right { justify-content: center; }
+}
+
+/* Si quieres mantener botones inferiores, hazlos menos prominentes */
+.form-actions { display: none; } /* o coméntalo si quieres mantenerlos */
+
 
 /* ---------- Small helpers ---------- */
 .error { color: var(--danger); margin: 8px 0; font-weight: 600; }

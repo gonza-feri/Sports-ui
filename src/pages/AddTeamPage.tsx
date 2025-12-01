@@ -39,6 +39,33 @@ export default function AddTeamPage(): JSX.Element {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    // Selector del banner superior que aparece/desaparece
+    const bannerSelector = ".top-banner"; // <- ajusta si tu banner tiene otra clase/id
+    const updateOffset = () => {
+      const banner = document.querySelector(bannerSelector) as HTMLElement | null;
+      const height = banner && getComputedStyle(banner).display !== "none" ? banner.offsetHeight : 0;
+      document.documentElement.style.setProperty("--top-offset", `${height}px`);
+    };
+
+    // Inicial y en resize
+    updateOffset();
+    window.addEventListener("resize", updateOffset);
+
+    // Observador para cambios en el banner (clase/style) si el banner se muestra/oculta por JS
+    const bannerEl = document.querySelector(bannerSelector);
+    let mo: MutationObserver | null = null;
+    if (bannerEl) {
+      mo = new MutationObserver(updateOffset);
+      mo.observe(bannerEl, { attributes: true, attributeFilter: ["style", "class"] });
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateOffset);
+      if (mo) mo.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
@@ -373,6 +400,27 @@ export default function AddTeamPage(): JSX.Element {
     try {
       setLoading(true);
 
+      // 1) Validación: prohibir nombres duplicados (case-insensitive, trim)
+      try {
+        const allTeamsRes = await api.get("/teams");
+        const allTeams: Team[] = allTeamsRes.data || [];
+        const currentName = teamName.trim().toLowerCase();
+
+        const isDuplicate = allTeams.some(t =>
+          t.name?.trim().toLowerCase() === currentName &&
+          String(t.id) !== String(id) // permitir editar el mismo equipo
+        );
+
+        if (isDuplicate) {
+          setError("Ya existe un equipo con ese nombre. Elige otro nombre único.");
+          setLoading(false);
+          return;
+        }
+      } catch (checkErr) {
+        // Si falla la validación, no bloqueamos el guardado, pero avisamos en consola
+        console.warn("No se pudo validar nombres duplicados:", checkErr);
+      }
+
       const teamPayload: Partial<Team> = {
         name: teamName.trim(),
         description: teamDescription.trim(),
@@ -440,14 +488,44 @@ export default function AddTeamPage(): JSX.Element {
         <header className="editor-header">
           <h2>{id ? "Edit team" : "Add team"}</h2>
           <div className="editor-actions">
-            <button className="btn" onClick={handleExportCSV}>Export CSV</button>
-            <button className="btn btn--ghost" onClick={() => navigate(id ? `/teams/${id}` : "/teams")}>Cancel</button>
+            <button className="btn" onClick={handleExportCSV}>Export players CSV file</button>
           </div>
         </header>
 
         {error && <p className="error">{error}</p>}
 
-        <form onSubmit={handleSubmit} className="team-form">
+        {/* Top action bar: Save (left) | Back/Cancel (right) */}
+        <div className="form-top-actions" role="toolbar" aria-label="Form actions">
+          <div className="form-top-left">
+            {/* Si el botón está fuera del form, usamos requestSubmit para disparar el submit del form */}
+            <button
+              type="button"
+              className="btn btn-save"
+              onClick={() => {
+                const form = document.getElementById("team-form") as HTMLFormElement | null;
+                if (form?.requestSubmit) form.requestSubmit();
+                else form?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+              }}
+            >
+              Save team
+            </button>
+          </div>
+
+          <div className="form-top-right">
+            <button
+              type="button"
+              className="btn btn-back"
+              onClick={() => navigate(id ? `/teams/${id}` : "/teams")}
+            >
+              Back
+            </button>
+          </div>
+        </div>
+
+{/* ... luego tu form: añade id="team-form" al <form> existente */}
+
+
+        <form id="team-form" onSubmit={handleSubmit} className="team-form">
           <div className="team-grid">
             <div className="team-block">
               <label className="label">Team name</label>
@@ -474,7 +552,7 @@ export default function AddTeamPage(): JSX.Element {
                 <h3>Players ({players.length})</h3>
 
                 <label className="btn btn--gray" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}>
-                  Add players file
+                  Import players CSV file
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -602,11 +680,6 @@ export default function AddTeamPage(): JSX.Element {
                 )}
               </div>
             ))}
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" className="btn">Save team</button>
-            <button type="button" className="btn btn--gray" onClick={() => navigate(id ? `/teams/${id}` : "/teams")}>Back</button>
           </div>
         </form>
       </section>
