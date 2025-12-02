@@ -7,7 +7,14 @@ import Menu from "../components/Menu";
 import "./TeamDetailPage.css";
 
 /* ---------- Tipos locales ---------- */
-type LineupSlot = { slotId: string; positionHint: string; playerId?: number | string | null; left?: string; top?: string; };
+type LineupSlot = {
+  slotId: string;
+  positionHint: string;
+  playerId?: number | string | null;
+  left?: string;
+  top?: string;
+  noAutoFill?: boolean; // si true, este slot NO será auto-llenado por la rutina ensureFieldNotEmpty
+};
 
 /* Extensión local de Team para campos extra que puede devolver tu backend */
 type TeamWithExtras = Team & { logo?: string; crest?: string; photo?: string; lineup?: LineupSlot[]; };
@@ -74,14 +81,15 @@ export default function TeamDetailPage(): JSX.Element {
   // Mostrar descripción completa o colapsada
 const [showFullDesc, setShowFullDesc] = useState<boolean>(false);
 
-// Evita auto-llenado tras "Limpiar campo"
+// estado que controla si permitimos auto-llenado
 const [preventAutoFill, setPreventAutoFill] = useState<boolean>(false);
 
+// ref sincronizado para lecturas fiables desde closures/event handlers
 const preventAutoFillRef = useRef<boolean>(preventAutoFill);
-
 useEffect(() => {
   preventAutoFillRef.current = preventAutoFill;
 }, [preventAutoFill]);
+
 
   /* ---------- Noticias (NewsAPI) ---------- */
   type NewsArticle = {
@@ -197,15 +205,24 @@ useEffect(() => {
   function onDragOverSlot(e: React.DragEvent) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
 
   function ensureFieldNotEmpty(nextSlots: LineupSlot[], currentPlayers: Player[]) {
-    // lee el ref para decidir si se debe auto-llenar
+    // Si la protección global está activa, no auto-llenamos
     if (preventAutoFillRef.current) return nextSlots;
 
     const hasStarters = currentPlayers.some(p => p.isStarter);
     if (!hasStarters) return nextSlots;
+
+    // Construimos lista de ids ya asignados
     const assignedIds = new Set(nextSlots.map(s => s.playerId).filter(Boolean));
+    // Jugadores disponibles en banquillo
     const bench = currentPlayers.filter(p => !assignedIds.has(p.id));
+
+    // Solo rellenamos slots que NO tengan noAutoFill === true
     const next = nextSlots.map(s => ({ ...s }));
-    for (const slot of next) { if (!slot.playerId && bench.length) slot.playerId = bench.shift()!.id; }
+    for (const slot of next) {
+      if (slot.playerId) continue; // ya asignado
+      if (slot.noAutoFill) continue; // explícitamente bloqueado
+      if (bench.length) slot.playerId = bench.shift()!.id;
+    }
     return next;
   }
 
@@ -215,13 +232,36 @@ useEffect(() => {
     if (!raw) return;
     const [pidRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
+
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s }));
       const target = next.find(s => s.slotId === targetSlotId);
       if (!target) return prev;
+
       const fromSlot = next.find(s => String(s.playerId) === String(pid));
+
+      // Si la protección global está activa o el slot objetivo está marcado noAutoFill,
+      // asignamos solo al slot objetivo y no auto-llenamos el resto.
+      if (preventAutoFillRef.current || target.noAutoFill) {
+        if (fromSlot) fromSlot.playerId = null;
+        target.playerId = pid;
+        // opcional: si quieres que el slot al que se ha asignado deje de estar bloqueado,
+        // descomenta la siguiente línea:
+        // target.noAutoFill = false;
+        if (id) saveLineupToStorage(id, next);
+        return next;
+      }
+
+      // Comportamiento normal (sin protección): swap o asignación y luego ensureFieldNotEmpty
       if (fromSlot && fromSlot.slotId === target.slotId) return prev;
-      if (fromSlot) { const temp = target.playerId; target.playerId = fromSlot.playerId; fromSlot.playerId = temp; } else { target.playerId = pid; }
+      if (fromSlot) {
+        const temp = target.playerId;
+        target.playerId = fromSlot.playerId;
+        fromSlot.playerId = temp;
+      } else {
+        target.playerId = pid;
+      }
+
       const ensured = ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, ensured);
       return ensured;
@@ -234,38 +274,41 @@ useEffect(() => {
     if (!raw) return;
     const [pidRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
+
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s }));
       for (const s of next) if (String(s.playerId) === String(pid)) s.playerId = null;
-      const ensured = ensureFieldNotEmpty(next, players);
-      if (id) saveLineupToStorage(id, ensured);
-      return ensured;
+
+      // Si la protección está activa, no auto-llenamos
+      const final = preventAutoFillRef.current ? next : ensureFieldNotEmpty(next, players);
+      if (id) saveLineupToStorage(id, final);
+      return final;
     });
   }
 
   /* Reset y limpiar */
   function resetToInitial() {
     if (!initialLineup) return;
-    setFieldSlots(initialLineup);
-    // permitir auto-llenado tras reset
+    // quitar bloqueo de todos los slots para permitir auto-llenado
+    const unlocked = initialLineup.map(s => ({ ...s, noAutoFill: false }));
+    setFieldSlots(unlocked);
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
-    if (id) { clearLineupStorage(id); saveLineupToStorage(id, initialLineup); }
+    if (id) { clearLineupStorage(id); saveLineupToStorage(id, unlocked); }
   }
-
 
 
   function clearField() {
     setFieldSlots(prev => {
-      const next = prev.map(s => ({ ...s, playerId: null }));
+      const next = prev.map(s => ({ ...s, playerId: null, noAutoFill: true }));
       if (id) saveLineupToStorage(id, next);
       return next;
     });
-    // activa la protección y sincroniza el ref inmediatamente
+
+    // También mantenemos la bandera global por compatibilidad
     setPreventAutoFill(true);
     preventAutoFillRef.current = true;
   }
-
 
   /* Guardado en backend y sincronización local */
   async function handleSaveLineup() {
@@ -441,7 +484,7 @@ useEffect(() => {
 
               <div className="field-actions">
                   <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
-                  <button className="btn btn-clear" onClick={clearField}>Limpiar campo</button>
+                  <button className="btn btn-clear" onClick={clearField}>Clean soccer field</button>
                 </div>
               </div>
             
@@ -493,7 +536,7 @@ useEffect(() => {
 
           {/* News section */}
           <section className="team-news">
-            <h3>Últimas noticias sobre {team?.name}</h3>
+            <h3>Latest news about {team?.name}</h3>
             {newsLoading && <p>Cargando noticias...</p>}
             {newsError && <p className="news-error">{newsError}</p>}
             {!newsLoading && !newsError && news && news.length === 0 && (
