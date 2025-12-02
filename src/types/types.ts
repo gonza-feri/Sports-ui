@@ -1,5 +1,6 @@
 // src/types/types.ts
 export type Player = {
+  photoPreview: string;
   id: number;
   name: string;
   number: number;
@@ -22,6 +23,7 @@ export type PlayerForm = {
 };
 
 export type Team = {
+  photo: any;
   id: number;
   name: string;
   logo?: string | null;           // <-- permitir null

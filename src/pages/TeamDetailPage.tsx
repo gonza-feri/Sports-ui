@@ -5,6 +5,7 @@ import type { Team, Player } from "../types/types";
 import Menu from "../components/Menu";
 import "./TeamDetailPage.css";
 
+/* ---------- Tipos locales ---------- */
 type LineupSlot = {
   slotId: string;
   positionHint: string;
@@ -24,6 +25,15 @@ type NewsArticle = {
   content?: string | null;
 };
 
+/* Extensión local de Team para campos extra que puede devolver tu backend */
+type TeamWithExtras = Team & {
+  logo?: string;
+  crest?: string;
+  photo?: string;
+  lineup?: LineupSlot[];
+};
+
+/* ---------- Plantilla de slots (4-3-3 vertical) ---------- */
 const DEFAULT_SLOTS_TEMPLATE: LineupSlot[] = [
   { slotId: "GK-1", positionHint: "GK", left: "50%", top: "92%" },
 
@@ -43,6 +53,31 @@ const DEFAULT_SLOTS_TEMPLATE: LineupSlot[] = [
 
 const LINEUP_STORAGE_KEY = (teamId: string | number) => `team_lineup_${teamId}`;
 
+/* ---------- Helpers de almacenamiento ---------- */
+function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
+  try {
+    localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup));
+  } catch {
+    // ignore
+  }
+}
+function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
+  try {
+    const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId));
+    return raw ? (JSON.parse(raw) as LineupSlot[]) : null;
+  } catch {
+    return null;
+  }
+}
+function clearLineupStorage(teamId: string | number) {
+  try {
+    localStorage.removeItem(LINEUP_STORAGE_KEY(teamId));
+  } catch {
+    // ignore
+  }
+}
+
+/* Construye alineación inicial intentando respetar posiciones */
 function posMatchesHint(pos: string, hint: string) {
   const p = String(pos || "").toLowerCase();
   const h = String(hint || "").toLowerCase();
@@ -52,45 +87,43 @@ function posMatchesHint(pos: string, hint: string) {
   if (h === "fwd") return ["st", "cf", "fw", "att"].some(x => p.includes(x));
   return p.includes(h);
 }
-
-function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
-  try { localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup)); } catch { /* empty */ }
-}
-function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
-  try { const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId)); return raw ? (JSON.parse(raw) as LineupSlot[]) : null; } catch { return null; }
-}
-function clearLineupStorage(teamId: string | number) {
-  try { localStorage.removeItem(LINEUP_STORAGE_KEY(teamId)); } catch { /* empty */ }
-}
-
 function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
   const lineup: LineupSlot[] = slotsTemplate.map(s => ({ ...s, playerId: null as number | string | null }));
   const available = players.slice();
 
   for (const slot of lineup) {
     const idx = available.findIndex(p => (p.positions || []).some(pos => posMatchesHint(pos, slot.positionHint)));
-    if (idx >= 0) { slot.playerId = available[idx].id; available.splice(idx, 1); }
+    if (idx >= 0) {
+      slot.playerId = available[idx].id;
+      available.splice(idx, 1);
+    }
   }
 
   for (const slot of lineup) {
-    if (!slot.playerId && available.length) slot.playerId = available.shift()!.id;
+    if (!slot.playerId && available.length) {
+      slot.playerId = available.shift()!.id;
+    }
   }
 
   return lineup;
 }
 
+/* ---------- Componente ---------- */
 export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [team, setTeam] = useState<Team | null>(null);
+  const [team, setTeam] = useState<TeamWithExtras | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [, setError] = useState<string | null>(null);
 
   const [fieldSlots, setFieldSlots] = useState<LineupSlot[]>([]);
   const [initialLineup, setInitialLineup] = useState<LineupSlot[] | null>(null);
+
   const [news, setNews] = useState<NewsArticle[] | null>(null);
+  const [newsLoading, setNewsLoading] = useState<boolean>(false);
+  const [newsError, setNewsError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState<boolean>(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -99,7 +132,7 @@ export default function TeamDetailPage(): JSX.Element {
   const benchRef = useRef<HTMLDivElement | null>(null);
   const [benchHeightPx, setBenchHeightPx] = useState<number | null>(null);
 
-  /* Load team and players */
+  /* ---------- Carga del equipo desde backend ---------- */
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -112,12 +145,10 @@ export default function TeamDetailPage(): JSX.Element {
         }
         const res = await api.get(`/teams/${id}`);
         if (cancelled) return;
-        const t = res.data as Team;
+        const t = res.data as TeamWithExtras;
         setTeam(t);
 
-        const rawPlayers = Array.isArray((t as unknown as { players?: unknown }).players)
-          ? ((t as unknown as { players?: unknown }).players as unknown[])
-          : [];
+        const rawPlayers = Array.isArray((t as { players?: unknown }).players) ? (t.players as unknown[]) : [];
         const pls: Player[] = rawPlayers.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
           return {
@@ -143,37 +174,30 @@ export default function TeamDetailPage(): JSX.Element {
     return () => { cancelled = true; };
   }, [id]);
 
-  /* Build lineup and initial state; if no saved lineup, apply initial and persist it */
+  /* ---------- Construcción de la alineación inicial y priorización: backend -> localStorage -> inicial ---------- */
   useEffect(() => {
     if (!players || players.length === 0 || !id || !team) return;
 
     const built = buildInitialLineup(DEFAULT_SLOTS_TEMPLATE, players);
 
-    // Type guard: comprueba que el valor es un array de LineupSlot con al menos un playerId válido
-    function isLineupArray(value: unknown): value is LineupSlot[] {
-      if (!Array.isArray(value)) return false;
-      return value.some(item => item && typeof item === "object" && ("playerId" in item));
-    }
-
-    // 1) Prioriza la alineación que venga del backend (team.lineup) si es válida
-    const backendLineup = (team as unknown as { lineup?: unknown }).lineup;
-    const backendIsValid = isLineupArray(backendLineup) && backendLineup.some(s => s.playerId !== null && s.playerId !== undefined);
+    // backend lineup (si existe y es válida)
+    const backendLineupCandidate = team.lineup;
+    const backendIsValid = Array.isArray(backendLineupCandidate) && backendLineupCandidate.some(s => s && s.playerId !== null && s.playerId !== undefined);
 
     if (backendIsValid) {
-      setFieldSlots(backendLineup as LineupSlot[]);
-      try { saveLineupToStorage(id, backendLineup as LineupSlot[]); } catch { /* empty */ }
+      setFieldSlots(backendLineupCandidate as LineupSlot[]);
+      try { saveLineupToStorage(id, backendLineupCandidate as LineupSlot[]); } catch { /* empty */ }
       setInitialLineup(built);
       return;
     }
 
-    // 2) Si no hay backend válido, mira localStorage
+    // localStorage
     const saved = loadLineupFromStorage(id);
     const savedIsValid = Array.isArray(saved) && saved.some(s => s && s.playerId !== null && s.playerId !== undefined);
 
     if (savedIsValid) {
       setFieldSlots(saved as LineupSlot[]);
     } else {
-      // 3) Si no hay nada válido, aplica la inicial y persistela localmente
       setFieldSlots(built);
       try { saveLineupToStorage(id, built); } catch { /* empty */ }
     }
@@ -181,8 +205,7 @@ export default function TeamDetailPage(): JSX.Element {
     setInitialLineup(built);
   }, [players, id, team]);
 
-
-  /* Persist fieldSlots on change (localStorage) */
+  /* Persistencia local cuando cambian los fieldSlots */
   useEffect(() => {
     if (!id) return;
     saveLineupToStorage(id, fieldSlots);
@@ -201,7 +224,7 @@ export default function TeamDetailPage(): JSX.Element {
     return () => window.removeEventListener("resize", updateBenchHeight);
   }, [fieldRef.current, fieldSlots.length]);
 
-  /* Drag & drop helpers */
+  /* ---------- Drag & drop ---------- */
   function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
     e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
     e.dataTransfer.effectAllowed = "move";
@@ -269,7 +292,7 @@ export default function TeamDetailPage(): JSX.Element {
     });
   }
 
-  /* Reset to initial (kept only in field actions) */
+  /* Reset y limpiar */
   function resetToInitial() {
     if (!initialLineup) return;
     setFieldSlots(initialLineup);
@@ -278,8 +301,6 @@ export default function TeamDetailPage(): JSX.Element {
       saveLineupToStorage(id, initialLineup);
     }
   }
-
-  /* Clear field: remove all players from field (explicitly allow empty field) */
   function clearField() {
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s, playerId: null }));
@@ -288,24 +309,17 @@ export default function TeamDetailPage(): JSX.Element {
     });
   }
 
-  /* Save lineup to backend */
+  /* Guardado en backend y sincronización local */
   async function handleSaveLineup() {
     if (!id || !team) return;
     setSaving(true);
     setSaveMessage(null);
     try {
-      // enviar al backend
       const payload = { ...team, lineup: fieldSlots };
       await api.put(`/teams/${id}`, payload);
-
-      // sincronizar estado local: actualizar team en memoria y localStorage
       setSaveMessage("Alineación guardada correctamente.");
-      try {
-        saveLineupToStorage(id, fieldSlots);
-      } catch { /* ignore */ }
-
-      // actualizar el objeto team en memoria para que al recargar use team.lineup
-      setTeam(prev => prev ? ({ ...prev, lineup: fieldSlots } as Team) : prev);
+      try { saveLineupToStorage(id, fieldSlots); } catch { /* empty */ }
+      setTeam(prev => prev ? ({ ...prev, lineup: fieldSlots } as TeamWithExtras) : prev);
     } catch (err) {
       console.error("save lineup failed", err);
       setSaveMessage("Error al guardar la alineación.");
@@ -315,46 +329,51 @@ export default function TeamDetailPage(): JSX.Element {
     }
   }
 
-  /* Optional news fetch (unchanged) */
+  /* ---------- Noticias (NewsAPI) ---------- */
   useEffect(() => {
-    async function fetchNewsIfKey() {
+    async function fetchNewsRSSViaProxy() {
+      setNews(null);
+      setNewsError(null);
       if (!team?.name) return;
-      const win = window as unknown as Record<string, unknown>;
-      const maybeKey = typeof win.REACT_APP_NEWSAPI_KEY === "string" ? win.REACT_APP_NEWSAPI_KEY : "";
-      if (!maybeKey) return;
+
+      setNewsLoading(true);
       try {
-        const q = encodeURIComponent(team.name);
-        const url = `https://newsapi.org/v2/everything?q=${q}&language=es&sortBy=publishedAt&pageSize=6&apiKey=${maybeKey}`;
-        const res = await fetch(url);
-        if (!res.ok) { setNews([]); return; }
-        const data = (await res.json()) as { articles?: unknown };
-        if (!data || !Array.isArray(data.articles)) { setNews([]); return; }
-        const articles: NewsArticle[] = data.articles.map((aRaw) => {
-          const a = aRaw as Record<string, unknown>;
-          return {
-            source: typeof a.source === "object" && a.source !== null ? {
-              id: typeof (a.source as Record<string, unknown>).id === "string" ? (a.source as Record<string, unknown>).id as string : null,
-              name: typeof (a.source as Record<string, unknown>).name === "string" ? (a.source as Record<string, unknown>).name as string : null,
-            } : undefined,
-            author: typeof a.author === "string" ? a.author : null,
-            title: typeof a.title === "string" ? a.title : null,
-            description: typeof a.description === "string" ? a.description : null,
-            url: typeof a.url === "string" ? a.url : null,
-            urlToImage: typeof a.urlToImage === "string" ? a.urlToImage : null,
-            publishedAt: typeof a.publishedAt === "string" ? a.publishedAt : null,
-            content: typeof a.content === "string" ? a.content : null,
-          };
-        });
-        setNews(articles.length ? articles : []);
-      } catch (err) {
-        console.warn("news fetch failed", err);
+        const res = await fetch(`/api/rss?q=${encodeURIComponent(team.name)}`);
+        if (!res.ok) {
+          setNewsError("No se pudieron obtener noticias RSS (proxy).");
+          setNews([]);
+          return;
+        }
+
+        const xmlText = await res.text();
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+        const items = Array.from(xmlDoc.querySelectorAll("item"));
+
+        const mapped: NewsArticle[] = items.map((item) => ({
+          source: { id: null, name: item.querySelector("source")?.textContent ?? "Google News" },
+          author: null,
+          title: item.querySelector("title")?.textContent ?? null,
+          description: item.querySelector("description")?.textContent ?? null,
+          url: item.querySelector("link")?.textContent ?? null,
+          urlToImage: null,
+          publishedAt: item.querySelector("pubDate")?.textContent ?? null,
+          content: null,
+        }));
+
+        setNews(mapped.length ? mapped : []);
+      } catch {
+        setNewsError("Error al obtener noticias RSS (proxy).");
         setNews([]);
+      } finally {
+        setNewsLoading(false);
       }
     }
-    fetchNewsIfKey();
+
+    fetchNewsRSSViaProxy();
   }, [team?.name]);
 
-  /* Rendering helpers */
+  /* ---------- Render helpers ---------- */
   const playersById = useMemo(() => {
     const map = new Map<string | number, Player>();
     for (const p of players) if (p.id !== undefined && p.id !== null) map.set(p.id, p);
@@ -379,13 +398,21 @@ export default function TeamDetailPage(): JSX.Element {
     );
   }
 
+  /* crest fallback seguro */
+  const crestCandidate = team ? (team.logo ?? team.crest ?? team.photo) : null;
+  const crestUrl = typeof crestCandidate === "string" ? crestCandidate : null;
+
   return (
     <div>
       <Menu />
       <section className="page-wrapper team-page">
         <header className="team-header">
           <div className="team-header-left">
-            <h2>{team?.name ?? "Team"}</h2>
+            {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
+            <div className="team-title-block">
+              <h2>{team?.name ?? "Team"}</h2>
+              {team?.description && <p className="team-desc-inline">{team.description}</p>}
+            </div>
 
             <button
               className="btn btn-save header-save"
@@ -395,6 +422,14 @@ export default function TeamDetailPage(): JSX.Element {
               title="Guardar alineación"
             >
               {saving ? "Guardando..." : "Save lineup"}
+            </button>
+
+            <button
+              className="btn btn-edit"
+              onClick={() => { if (!id) return; navigate(`/teams/${id}/edit`); }}
+              title="Editar equipo"
+            >
+              Edit team
             </button>
 
             {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
@@ -475,6 +510,20 @@ export default function TeamDetailPage(): JSX.Element {
                 ))}
               </div>
 
+              <h3 style={{ marginTop: 12 }}>Suplentes</h3>
+              <div className="bench-list">
+                {substitutesBench.map(p => (
+                  <div key={p.id} className="bench-player" draggable={true} onDragStart={(e) => onDragStartFromBench(e, p.id!)} title={p.name}>
+                    <img src={p.photoPreview ?? ""} alt={p.name} className="bench-photo" />
+                    <div className="bench-info small">
+                      <div className="bench-name">{p.name}</div>
+                      <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                    </div>
+                    <div className="bench-meta"><span className="badge">Suplente</span></div>
+                  </div>
+                ))}
+              </div>
+
               <h3 style={{ marginTop: 12 }}>No titulares</h3>
               <div className="bench-list">
                 {nonStartersBench.map(p => (
@@ -491,9 +540,18 @@ export default function TeamDetailPage(): JSX.Element {
             </aside>
           </div>
 
-          {news && news.length > 0 && (
-            <section className="team-news">
-              <h3>Últimas noticias sobre {team?.name}</h3>
+          {/* News section */}
+          <section className="team-news">
+            <h3>Últimas noticias sobre {team?.name}</h3>
+
+            {newsLoading && <p>Cargando noticias...</p>}
+            {newsError && <p className="news-error">{newsError}</p>}
+
+            {!newsLoading && !newsError && news && news.length === 0 && (
+              <p>No se han encontrado noticias recientes para "{team?.name}".</p>
+            )}
+
+            {!newsLoading && !newsError && news && news.length > 0 && (
               <div className="news-list">
                 {news.map((a, idx) => (
                   <article key={idx} className="news-item">
@@ -506,8 +564,8 @@ export default function TeamDetailPage(): JSX.Element {
                   </article>
                 ))}
               </div>
-            </section>
-          )}
+            )}
+          </section>
         </main>
       </section>
     </div>
