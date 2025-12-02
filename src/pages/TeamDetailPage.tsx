@@ -1,3 +1,4 @@
+// src/pages/TeamDetailPage.tsx
 import React, { JSX, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
@@ -6,35 +7,21 @@ import Menu from "../components/Menu";
 import "./TeamDetailPage.css";
 
 /* ---------- Tipos locales ---------- */
-type LineupSlot = {
-  slotId: string;
-  positionHint: string;
-  playerId?: number | string | null;
-  left?: string;
-  top?: string;
-};
+type LineupSlot = { slotId: string; positionHint: string; playerId?: number | string | null; left?: string; top?: string; };
 
 /* Extensión local de Team para campos extra que puede devolver tu backend */
-type TeamWithExtras = Team & {
-  logo?: string;
-  crest?: string;
-  photo?: string;
-  lineup?: LineupSlot[];
-};
+type TeamWithExtras = Team & { logo?: string; crest?: string; photo?: string; lineup?: LineupSlot[]; };
 
 /* ---------- Plantilla de slots (4-3-3 vertical) ---------- */
 const DEFAULT_SLOTS_TEMPLATE: LineupSlot[] = [
   { slotId: "GK-1", positionHint: "GK", left: "50%", top: "92%" },
-
   { slotId: "DEF-1", positionHint: "DEF", left: "12%", top: "78%" },
   { slotId: "DEF-2", positionHint: "DEF", left: "32%", top: "78%" },
   { slotId: "DEF-3", positionHint: "DEF", left: "68%", top: "78%" },
   { slotId: "DEF-4", positionHint: "DEF", left: "88%", top: "78%" },
-
   { slotId: "MID-1", positionHint: "MID", left: "22%", top: "56%" },
   { slotId: "MID-2", positionHint: "MID", left: "50%", top: "56%" },
   { slotId: "MID-3", positionHint: "MID", left: "78%", top: "56%" },
-
   { slotId: "FWD-1", positionHint: "FWD", left: "22%", top: "32%" },
   { slotId: "FWD-2", positionHint: "FWD", left: "50%", top: "32%" },
   { slotId: "FWD-3", positionHint: "FWD", left: "78%", top: "32%" },
@@ -44,27 +31,12 @@ const LINEUP_STORAGE_KEY = (teamId: string | number) => `team_lineup_${teamId}`;
 
 /* ---------- Helpers de almacenamiento ---------- */
 function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
-  try {
-    localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup));
-  } catch {
-    // ignore
-  }
+  try { localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup)); } catch { /* ignore */ }
 }
 function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
-  try {
-    const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId));
-    return raw ? (JSON.parse(raw) as LineupSlot[]) : null;
-  } catch {
-    return null;
-  }
+  try { const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId)); return raw ? (JSON.parse(raw) as LineupSlot[]) : null; } catch { return null; }
 }
-function clearLineupStorage(teamId: string | number) {
-  try {
-    localStorage.removeItem(LINEUP_STORAGE_KEY(teamId));
-  } catch {
-    // ignore
-  }
-}
+function clearLineupStorage(teamId: string | number) { try { localStorage.removeItem(LINEUP_STORAGE_KEY(teamId)); } catch { /* ignore */ } }
 
 /* Construye alineación inicial intentando respetar posiciones */
 function posMatchesHint(pos: string, hint: string) {
@@ -79,21 +51,13 @@ function posMatchesHint(pos: string, hint: string) {
 function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
   const lineup: LineupSlot[] = slotsTemplate.map(s => ({ ...s, playerId: null as number | string | null }));
   const available = players.slice();
-
   for (const slot of lineup) {
     const idx = available.findIndex(p => (p.positions || []).some(pos => posMatchesHint(pos, slot.positionHint)));
-    if (idx >= 0) {
-      slot.playerId = available[idx].id;
-      available.splice(idx, 1);
-    }
+    if (idx >= 0) { slot.playerId = available[idx].id; available.splice(idx, 1); }
   }
-
   for (const slot of lineup) {
-    if (!slot.playerId && available.length) {
-      slot.playerId = available.shift()!.id;
-    }
+    if (!slot.playerId && available.length) { slot.playerId = available.shift()!.id; }
   }
-
   return lineup;
 }
 
@@ -101,14 +65,24 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
 export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const [team, setTeam] = useState<TeamWithExtras | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [, setError] = useState<string | null>(null);
-
   const [fieldSlots, setFieldSlots] = useState<LineupSlot[]>([]);
   const [initialLineup, setInitialLineup] = useState<LineupSlot[] | null>(null);
+
+  /* ---------- Noticias (NewsAPI) ---------- */
+  type NewsArticle = {
+    source?: { id?: string | null; name?: string | null };
+    author?: string | null;
+    title?: string | null;
+    description?: string | null;
+    url?: string | null;
+    urlToImage?: string | null;
+    publishedAt?: string | null;
+    content?: string | null;
+  };
 
   const [news, setNews] = useState<NewsArticle[] | null>(null);
   const [newsLoading, setNewsLoading] = useState<boolean>(false);
@@ -127,16 +101,11 @@ export default function TeamDetailPage(): JSX.Element {
     async function load() {
       try {
         setLoading(true);
-        if (!id) {
-          setError("Team id missing");
-          setLoading(false);
-          return;
-        }
+        if (!id) { setError("Team id missing"); setLoading(false); return; }
         const res = await api.get(`/teams/${id}`);
         if (cancelled) return;
         const t = res.data as TeamWithExtras;
         setTeam(t);
-
         const rawPlayers = Array.isArray((t as { players?: unknown }).players) ? (t.players as unknown[]) : [];
         const pls: Player[] = rawPlayers.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
@@ -150,7 +119,6 @@ export default function TeamDetailPage(): JSX.Element {
             isStarter: Boolean(p.isStarter),
           } as Player;
         });
-
         setPlayers(pls);
       } catch (err) {
         console.error(err);
@@ -163,42 +131,26 @@ export default function TeamDetailPage(): JSX.Element {
     return () => { cancelled = true; };
   }, [id]);
 
-  /* ---------- Construcción de la alineación inicial y priorización: backend -> localStorage -> inicial ---------- */
+  /* ---------- Construcción de la alineación inicial ---------- */
   useEffect(() => {
     if (!players || players.length === 0 || !id || !team) return;
-
     const built = buildInitialLineup(DEFAULT_SLOTS_TEMPLATE, players);
-
-    // backend lineup (si existe y es válida)
     const backendLineupCandidate = team.lineup;
     const backendIsValid = Array.isArray(backendLineupCandidate) && backendLineupCandidate.some(s => s && s.playerId !== null && s.playerId !== undefined);
-
     if (backendIsValid) {
       setFieldSlots(backendLineupCandidate as LineupSlot[]);
       try { saveLineupToStorage(id, backendLineupCandidate as LineupSlot[]); } catch { /* empty */ }
       setInitialLineup(built);
       return;
     }
-
-    // localStorage
     const saved = loadLineupFromStorage(id);
     const savedIsValid = Array.isArray(saved) && saved.some(s => s && s.playerId !== null && s.playerId !== undefined);
-
-    if (savedIsValid) {
-      setFieldSlots(saved as LineupSlot[]);
-    } else {
-      setFieldSlots(built);
-      try { saveLineupToStorage(id, built); } catch { /* empty */ }
-    }
-
+    if (savedIsValid) { setFieldSlots(saved as LineupSlot[]); } else { setFieldSlots(built); try { saveLineupToStorage(id, built); } catch { /* empty */ } }
     setInitialLineup(built);
   }, [players, id, team]);
 
   /* Persistencia local cuando cambian los fieldSlots */
-  useEffect(() => {
-    if (!id) return;
-    saveLineupToStorage(id, fieldSlots);
-  }, [fieldSlots, id]);
+  useEffect(() => { if (!id) return; saveLineupToStorage(id, fieldSlots); }, [fieldSlots, id]);
 
   /* Bench height sync */
   useLayoutEffect(() => {
@@ -213,27 +165,18 @@ export default function TeamDetailPage(): JSX.Element {
     return () => window.removeEventListener("resize", updateBenchHeight);
   }, [fieldRef.current, fieldSlots.length]);
 
-  /* ---------- Drag & drop ---------- */
-  function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
-    e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
-    e.dataTransfer.effectAllowed = "move";
-  }
-  function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
-    e.dataTransfer.setData("text/plain", `${playerId}|`);
-    e.dataTransfer.effectAllowed = "move";
-  }
+  /* Drag & drop helpers (sin cambios) */
+  function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) { e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`); e.dataTransfer.effectAllowed = "move"; }
+  function onDragStartFromBench(e: React.DragEvent, playerId: number | string) { e.dataTransfer.setData("text/plain", `${playerId}|`); e.dataTransfer.effectAllowed = "move"; }
   function onDragOverSlot(e: React.DragEvent) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
 
   function ensureFieldNotEmpty(nextSlots: LineupSlot[], currentPlayers: Player[]) {
     const hasStarters = currentPlayers.some(p => p.isStarter);
     if (!hasStarters) return nextSlots;
-
     const assignedIds = new Set(nextSlots.map(s => s.playerId).filter(Boolean));
     const bench = currentPlayers.filter(p => !assignedIds.has(p.id));
     const next = nextSlots.map(s => ({ ...s }));
-    for (const slot of next) {
-      if (!slot.playerId && bench.length) slot.playerId = bench.shift()!.id;
-    }
+    for (const slot of next) { if (!slot.playerId && bench.length) slot.playerId = bench.shift()!.id; }
     return next;
   }
 
@@ -243,22 +186,13 @@ export default function TeamDetailPage(): JSX.Element {
     if (!raw) return;
     const [pidRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
-
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s }));
       const target = next.find(s => s.slotId === targetSlotId);
       if (!target) return prev;
       const fromSlot = next.find(s => String(s.playerId) === String(pid));
       if (fromSlot && fromSlot.slotId === target.slotId) return prev;
-
-      if (fromSlot) {
-        const temp = target.playerId;
-        target.playerId = fromSlot.playerId;
-        fromSlot.playerId = temp;
-      } else {
-        target.playerId = pid;
-      }
-
+      if (fromSlot) { const temp = target.playerId; target.playerId = fromSlot.playerId; fromSlot.playerId = temp; } else { target.playerId = pid; }
       const ensured = ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, ensured);
       return ensured;
@@ -271,7 +205,6 @@ export default function TeamDetailPage(): JSX.Element {
     if (!raw) return;
     const [pidRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
-
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s }));
       for (const s of next) if (String(s.playerId) === String(pid)) s.playerId = null;
@@ -285,17 +218,10 @@ export default function TeamDetailPage(): JSX.Element {
   function resetToInitial() {
     if (!initialLineup) return;
     setFieldSlots(initialLineup);
-    if (id) {
-      clearLineupStorage(id);
-      saveLineupToStorage(id, initialLineup);
-    }
+    if (id) { clearLineupStorage(id); saveLineupToStorage(id, initialLineup); }
   }
   function clearField() {
-    setFieldSlots(prev => {
-      const next = prev.map(s => ({ ...s, playerId: null }));
-      if (id) saveLineupToStorage(id, next);
-      return next;
-    });
+    setFieldSlots(prev => { const next = prev.map(s => ({ ...s, playerId: null })); if (id) saveLineupToStorage(id, next); return next; });
   }
 
   /* Guardado en backend y sincronización local */
@@ -318,124 +244,57 @@ export default function TeamDetailPage(): JSX.Element {
     }
   }
 
-  /* ---------- Noticias (NewsAPI) ---------- */
-  // Tipos existentes de tu archivo
-  type NewsArticle = {
-    source?: { id?: string | null; name?: string | null };
-    author?: string | null;
-    title?: string | null;
-    description?: string | null;
-    url?: string | null;
-    urlToImage?: string | null;
-    publishedAt?: string | null;
-    content?: string | null;
-  };
-
-  // Bloque de noticias con RSS via proxy
+  /* ---------- Noticias: reemplazo RSS por NewsAPI (misma clave que FootballNews) ---------- */
   useEffect(() => {
-    async function fetchNewsRSSViaProxy() {
+    let cancelled = false;
+
+    async function fetchTeamNews() {
       setNews(null);
       setNewsError(null);
       if (!team?.name) return;
-
       setNewsLoading(true);
+
       try {
-        const res = await fetch(`/api/rss?q=${encodeURIComponent(team.name)}`);
-        if (!res.ok) {
-          setNewsError("No se pudieron obtener noticias RSS (proxy).");
+        // Reutilizamos la misma API key que en FootballNews
+        const apiKey = "6866d2f9cd2b482da43ecda2e5fdf898";
+        const q = encodeURIComponent(`${team.name} football OR ${team.name}`);
+        const url = `https://newsapi.org/v2/everything?q=${q}&language=en&pageSize=8&apiKey=${apiKey}`;
+
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) throw new Error(`NewsAPI responded ${res.status}`);
+        const data = await res.json();
+
+        const articles = Array.isArray(data?.articles) ? data.articles : [];
+        const cleaned: NewsArticle[] = articles
+          .filter((a: any) => a && a.title && a.url)
+          .map((a: any) => ({
+            source: { id: null, name: a.source?.name ?? "Source" },
+            author: a.author ?? null,
+            title: a.title ?? null,
+            description: a.description ?? null,
+            url: a.url ?? null,
+            urlToImage: a.urlToImage ?? a.urlToImage ?? null,
+            publishedAt: a.publishedAt ?? null,
+            content: a.content ?? null,
+          }));
+
+        if (!cancelled) {
+          setNews(cleaned.length ? cleaned : []);
+          if (cleaned.length === 0) setNewsError(`No se han encontrado noticias recientes para "${team.name}".`);
+        }
+      } catch (err) {
+        console.error("Error fetching team news:", err);
+        if (!cancelled) {
           setNews([]);
-          return;
+          setNewsError("Error al obtener noticias. Intenta de nuevo más tarde.");
         }
-
-        const xmlText = await res.text();
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-
-        const itemsNodeList = xmlDoc.getElementsByTagName("item");
-        const items: Element[] = [];
-        for (let i = 0; i < itemsNodeList.length; i++) {
-          const node = itemsNodeList.item(i);
-          if (node) items.push(node);
-        }
-
-        const mapped: NewsArticle[] = items.map((item) => {
-          const titleNode = item.getElementsByTagName("title").item(0);
-          const descNode = item.getElementsByTagName("description").item(0);
-          const linkNode = item.getElementsByTagName("link").item(0);
-          const pubDateNode = item.getElementsByTagName("pubDate").item(0);
-          const sourceNode = item.getElementsByTagName("source").item(0);
-
-          const titleText = titleNode && titleNode.textContent ? titleNode.textContent : null;
-          const descText = descNode && descNode.textContent ? descNode.textContent : null;
-          const linkText = linkNode && linkNode.textContent ? linkNode.textContent : null;
-          const pubDateText = pubDateNode && pubDateNode.textContent ? pubDateNode.textContent : null;
-          const sourceText = sourceNode && sourceNode.textContent ? sourceNode.textContent : null;
-
-          return {
-            source: { id: null, name: sourceText ?? "Google News" },
-            author: null,
-            title: titleText,
-            description: descText,
-            url: linkText,
-            urlToImage: null,
-            publishedAt: pubDateText,
-            content: null
-          };
-        });
-
-        // Fallback si no hay resultados específicos para el equipo:
-        if (mapped.length === 0) {
-          const resFallback = await fetch(`/api/rss?q=${encodeURIComponent("LaLiga fútbol")}`);
-          if (resFallback.ok) {
-            const xmlFallback = await resFallback.text();
-            const docFallback = parser.parseFromString(xmlFallback, "application/xml");
-            const itemsFallbackNodeList = docFallback.getElementsByTagName("item");
-            const itemsFallback: Element[] = [];
-            for (let i = 0; i < itemsFallbackNodeList.length; i++) {
-              const node = itemsFallbackNodeList.item(i);
-              if (node) itemsFallback.push(node);
-            }
-            const mappedFallback: NewsArticle[] = itemsFallback.map((item) => {
-              const titleNode = item.getElementsByTagName("title").item(0);
-              const descNode = item.getElementsByTagName("description").item(0);
-              const linkNode = item.getElementsByTagName("link").item(0);
-              const pubDateNode = item.getElementsByTagName("pubDate").item(0);
-              const sourceNode = item.getElementsByTagName("source").item(0);
-
-              const titleText = titleNode && titleNode.textContent ? titleNode.textContent : null;
-              const descText = descNode && descNode.textContent ? descNode.textContent : null;
-              const linkText = linkNode && linkNode.textContent ? linkNode.textContent : null;
-              const pubDateText = pubDateNode && pubDateNode.textContent ? pubDateNode.textContent : null;
-              const sourceText = sourceNode && sourceNode.textContent ? sourceNode.textContent : null;
-
-              return {
-                source: { id: null, name: sourceText ?? "Google News" },
-                author: null,
-                title: titleText,
-                description: descText,
-                url: linkText,
-                urlToImage: null,
-                publishedAt: pubDateText,
-                content: null
-              };
-            });
-
-            setNews(mappedFallback.length ? mappedFallback : []);
-          } else {
-            setNews([]);
-          }
-        } else {
-          setNews(mapped);
-        }
-      } catch {
-        setNewsError("Error al obtener noticias RSS (proxy).");
-        setNews([]);
       } finally {
-        setNewsLoading(false);
+        if (!cancelled) setNewsLoading(false);
       }
     }
 
-    fetchNewsRSSViaProxy();
+    fetchTeamNews();
+    return () => { cancelled = true; };
   }, [team?.name]);
 
   /* ---------- Render helpers ---------- */
@@ -448,7 +307,6 @@ export default function TeamDetailPage(): JSX.Element {
   const starters = players.filter(p => p.isStarter);
   const substitutes = players.filter(p => !p.isStarter && p.positions && p.positions.length > 0);
   const nonStarters = players.filter(p => !p.isStarter && (!p.positions || p.positions.length === 0));
-
   const assignedIds = new Set(fieldSlots.map(s => s.playerId).filter(Boolean));
   const startersBench = starters.filter(p => !assignedIds.has(p.id));
   const substitutesBench = substitutes.filter(p => !assignedIds.has(p.id));
@@ -458,7 +316,9 @@ export default function TeamDetailPage(): JSX.Element {
     return (
       <div>
         <Menu />
-        <section className="page-wrapper"><p>Cargando...</p></section>
+        <section className="page-wrapper">
+          <p>Cargando...</p>
+        </section>
       </div>
     );
   }
@@ -478,28 +338,12 @@ export default function TeamDetailPage(): JSX.Element {
               <h2>{team?.name ?? "Team"}</h2>
               {team?.description && <p className="team-desc-inline">{team.description}</p>}
             </div>
-
-            <button
-              className="btn btn-save header-save"
-              onClick={handleSaveLineup}
-              disabled={saving}
-              aria-label="Save lineup"
-              title="Guardar alineación"
-            >
+            <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
               {saving ? "Guardando..." : "Save lineup"}
             </button>
-
-            <button
-              className="btn btn-edit"
-              onClick={() => { if (!id) return; navigate(`/teams/${id}/edit`); }}
-              title="Editar equipo"
-            >
-              Edit team
-            </button>
-
+            <button className="btn btn-edit" onClick={() => { if (!id) return; navigate(`/teams/${id}/edit`); }} title="Editar equipo">Edit team</button>
             {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
           </div>
-
           <div className="team-header-actions">
             <button className="btn btn-back" onClick={() => navigate("/teams")}>Back</button>
           </div>
@@ -515,24 +359,12 @@ export default function TeamDetailPage(): JSX.Element {
                 <div className="penalty-bottom" />
                 <div className="goal-top" />
                 <div className="goal-bottom" />
-
                 {fieldSlots.map(slot => {
                   const player = playersById.get(slot.playerId ?? "");
                   return (
-                    <div
-                      key={slot.slotId}
-                      className="field-slot-absolute"
-                      style={{ left: slot.left ?? "50%", top: slot.top ?? "50%" }}
-                      onDragOver={onDragOverSlot}
-                      onDrop={(e) => onDropToSlot(e, slot.slotId)}
-                    >
+                    <div key={slot.slotId} className="field-slot-absolute" style={{ left: slot.left ?? "50%", top: slot.top ?? "50%" }} onDragOver={onDragOverSlot} onDrop={(e) => onDropToSlot(e, slot.slotId)}>
                       {player ? (
-                        <div
-                          className="player-chip vertical"
-                          draggable={Boolean(player.isStarter)}
-                          onDragStart={(e) => onDragStartFromField(e, player.id!, slot.slotId)}
-                          title={`${player.name} ${(player.positions || []).join(", ")}`}
-                        >
+                        <div className="player-chip vertical" draggable={Boolean(player.isStarter)} onDragStart={(e) => onDragStartFromField(e, player.id!, slot.slotId)} title={`${player.name} ${(player.positions || []).join(", ")}`}>
                           <img src={player.photoPreview ?? ""} alt={player.name} className="chip-photo large" />
                           <div className="chip-info centered">
                             <div className="chip-name">{player.name}</div>
@@ -548,19 +380,13 @@ export default function TeamDetailPage(): JSX.Element {
               </div>
 
               <div className="field-actions">
-                <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
-                <button className="btn btn-clear" onClick={clearField}>Limpiar campo</button>
+                  <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
+                  <button className="btn btn-clear" onClick={clearField}>Limpiar campo</button>
+                </div>
               </div>
-            </div>
+            
 
-            <aside
-              className="bench-area"
-              aria-label="Bench and full squad"
-              ref={benchRef}
-              onDragOver={(e) => { e.preventDefault(); }}
-              onDrop={onDropToBench}
-              style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
-            >
+            <aside className="bench-area" aria-label="Bench and full squad" ref={benchRef} onDragOver={(e) => { e.preventDefault(); }} onDrop={onDropToBench} style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}>
               <h3>Titulares</h3>
               <div className="bench-list">
                 {startersBench.map(p => (
@@ -608,14 +434,11 @@ export default function TeamDetailPage(): JSX.Element {
           {/* News section */}
           <section className="team-news">
             <h3>Últimas noticias sobre {team?.name}</h3>
-
             {newsLoading && <p>Cargando noticias...</p>}
             {newsError && <p className="news-error">{newsError}</p>}
-
             {!newsLoading && !newsError && news && news.length === 0 && (
               <p>No se han encontrado noticias recientes para "{team?.name}".</p>
             )}
-
             {!newsLoading && !newsError && news && news.length > 0 && (
               <div className="news-list">
                 {news.map((a, idx) => (
