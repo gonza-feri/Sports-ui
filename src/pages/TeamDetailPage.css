@@ -31,7 +31,54 @@
 }
 .team-title-block { display: flex; flex-direction: column; gap: 4px; max-width: 520px; }
 .team-title-block h2 { margin: 0; font-size: 1.6rem; }
-.team-desc-inline { margin: 0; color: rgba(230,238,248,0.78); font-size: 0.92rem; max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ---------- Team description: collapsed / expanded (block flow) ---------- */
+.team-desc-wrapper {
+  display: block;            /* forzar flujo en bloque */
+  width: 100%;
+  max-width: 60ch;           /* opcional: limita ancho para legibilidad */
+  margin: 0.25rem 0;
+}
+
+.team-desc-inline {
+  display: block;            /* importante: que sea block, no inline */
+  white-space: normal;       /* permitir saltos de línea */
+  word-wrap: break-word;     /* partir palabras largas si hace falta */
+  overflow: hidden;
+  transition: max-height 0.28s ease, opacity 0.18s ease;
+  line-height: 1.4;
+  max-height: calc(1.4em * 4); /* por defecto mostrar ~4 líneas */
+  opacity: 1;
+}
+
+/* estado colapsado: limitar altura a N líneas */
+.team-desc-inline.collapsed {
+  max-height: calc(1.4em * 4); /* 4 líneas */
+}
+
+/* estado expandido: permitir mostrar todo y empujar el contenido */
+.team-desc-inline.expanded {
+  max-height: 2000px;        /* suficientemente grande para mostrar todo */
+  overflow: visible;
+  white-space: normal;
+}
+
+/* botón toggle */
+.desc-toggle {
+  display: inline-block;
+  margin-top: 6px;
+  background: transparent;
+  border: none;
+  color: var(--link-color, #0b66ff);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.desc-toggle:focus {
+  outline: 2px solid rgba(11,102,255,0.2);
+  border-radius: 4px;
+}
+
 
 .team-header-actions { display: flex; gap: 10px; align-items: center; }
 .btn {

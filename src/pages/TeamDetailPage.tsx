@@ -71,6 +71,17 @@ export default function TeamDetailPage(): JSX.Element {
   const [, setError] = useState<string | null>(null);
   const [fieldSlots, setFieldSlots] = useState<LineupSlot[]>([]);
   const [initialLineup, setInitialLineup] = useState<LineupSlot[] | null>(null);
+  // Mostrar descripción completa o colapsada
+const [showFullDesc, setShowFullDesc] = useState<boolean>(false);
+
+// Evita auto-llenado tras "Limpiar campo"
+const [preventAutoFill, setPreventAutoFill] = useState<boolean>(false);
+
+const preventAutoFillRef = useRef<boolean>(preventAutoFill);
+
+useEffect(() => {
+  preventAutoFillRef.current = preventAutoFill;
+}, [preventAutoFill]);
 
   /* ---------- Noticias (NewsAPI) ---------- */
   type NewsArticle = {
@@ -166,11 +177,29 @@ export default function TeamDetailPage(): JSX.Element {
   }, [fieldRef.current, fieldSlots.length]);
 
   /* Drag & drop helpers (sin cambios) */
-  function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) { e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`); e.dataTransfer.effectAllowed = "move"; }
-  function onDragStartFromBench(e: React.DragEvent, playerId: number | string) { e.dataTransfer.setData("text/plain", `${playerId}|`); e.dataTransfer.effectAllowed = "move"; }
+  function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
+    // el usuario inicia una acción intencional: permitir auto-llenado futuro
+    setPreventAutoFill(false);
+    preventAutoFillRef.current = false;
+
+    e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
+  function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
+    setPreventAutoFill(false);
+    preventAutoFillRef.current = false;
+
+    e.dataTransfer.setData("text/plain", `${playerId}|`);
+    e.dataTransfer.effectAllowed = "move";
+  }
+
   function onDragOverSlot(e: React.DragEvent) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
 
   function ensureFieldNotEmpty(nextSlots: LineupSlot[], currentPlayers: Player[]) {
+    // lee el ref para decidir si se debe auto-llenar
+    if (preventAutoFillRef.current) return nextSlots;
+
     const hasStarters = currentPlayers.some(p => p.isStarter);
     if (!hasStarters) return nextSlots;
     const assignedIds = new Set(nextSlots.map(s => s.playerId).filter(Boolean));
@@ -218,11 +247,25 @@ export default function TeamDetailPage(): JSX.Element {
   function resetToInitial() {
     if (!initialLineup) return;
     setFieldSlots(initialLineup);
+    // permitir auto-llenado tras reset
+    setPreventAutoFill(false);
+    preventAutoFillRef.current = false;
     if (id) { clearLineupStorage(id); saveLineupToStorage(id, initialLineup); }
   }
+
+
+
   function clearField() {
-    setFieldSlots(prev => { const next = prev.map(s => ({ ...s, playerId: null })); if (id) saveLineupToStorage(id, next); return next; });
+    setFieldSlots(prev => {
+      const next = prev.map(s => ({ ...s, playerId: null }));
+      if (id) saveLineupToStorage(id, next);
+      return next;
+    });
+    // activa la protección y sincroniza el ref inmediatamente
+    setPreventAutoFill(true);
+    preventAutoFillRef.current = true;
   }
+
 
   /* Guardado en backend y sincronización local */
   async function handleSaveLineup() {
@@ -336,7 +379,24 @@ export default function TeamDetailPage(): JSX.Element {
             {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
             <div className="team-title-block">
               <h2>{team?.name ?? "Team"}</h2>
-              {team?.description && <p className="team-desc-inline">{team.description}</p>}
+              {team?.description && (
+                <div className="team-desc-wrapper">
+                  <p className={`team-desc-inline ${showFullDesc ? "expanded" : "collapsed"}`}>
+                    {team.description}
+                  </p>
+
+                  {typeof team.description === "string" && team.description.length > 240 && (
+                    <button
+                      type="button"
+                      className="desc-toggle"
+                      onClick={() => setShowFullDesc((s) => !s)}
+                      aria-expanded={showFullDesc}
+                    >
+                      {showFullDesc ? "Mostrar menos" : "Mostrar más"}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
               {saving ? "Guardando..." : "Save lineup"}
