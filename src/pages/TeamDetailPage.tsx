@@ -14,17 +14,6 @@ type LineupSlot = {
   top?: string;
 };
 
-type NewsArticle = {
-  source?: { id?: string | null; name?: string | null };
-  author?: string | null;
-  title?: string | null;
-  description?: string | null;
-  url?: string | null;
-  urlToImage?: string | null;
-  publishedAt?: string | null;
-  content?: string | null;
-};
-
 /* Extensión local de Team para campos extra que puede devolver tu backend */
 type TeamWithExtras = Team & {
   logo?: string;
@@ -330,6 +319,19 @@ export default function TeamDetailPage(): JSX.Element {
   }
 
   /* ---------- Noticias (NewsAPI) ---------- */
+  // Tipos existentes de tu archivo
+  type NewsArticle = {
+    source?: { id?: string | null; name?: string | null };
+    author?: string | null;
+    title?: string | null;
+    description?: string | null;
+    url?: string | null;
+    urlToImage?: string | null;
+    publishedAt?: string | null;
+    content?: string | null;
+  };
+
+  // Bloque de noticias con RSS via proxy
   useEffect(() => {
     async function fetchNewsRSSViaProxy() {
       setNews(null);
@@ -348,20 +350,83 @@ export default function TeamDetailPage(): JSX.Element {
         const xmlText = await res.text();
         const parser = new DOMParser();
         const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-        const items = Array.from(xmlDoc.querySelectorAll("item"));
 
-        const mapped: NewsArticle[] = items.map((item) => ({
-          source: { id: null, name: item.querySelector("source")?.textContent ?? "Google News" },
-          author: null,
-          title: item.querySelector("title")?.textContent ?? null,
-          description: item.querySelector("description")?.textContent ?? null,
-          url: item.querySelector("link")?.textContent ?? null,
-          urlToImage: null,
-          publishedAt: item.querySelector("pubDate")?.textContent ?? null,
-          content: null,
-        }));
+        const itemsNodeList = xmlDoc.getElementsByTagName("item");
+        const items: Element[] = [];
+        for (let i = 0; i < itemsNodeList.length; i++) {
+          const node = itemsNodeList.item(i);
+          if (node) items.push(node);
+        }
 
-        setNews(mapped.length ? mapped : []);
+        const mapped: NewsArticle[] = items.map((item) => {
+          const titleNode = item.getElementsByTagName("title").item(0);
+          const descNode = item.getElementsByTagName("description").item(0);
+          const linkNode = item.getElementsByTagName("link").item(0);
+          const pubDateNode = item.getElementsByTagName("pubDate").item(0);
+          const sourceNode = item.getElementsByTagName("source").item(0);
+
+          const titleText = titleNode && titleNode.textContent ? titleNode.textContent : null;
+          const descText = descNode && descNode.textContent ? descNode.textContent : null;
+          const linkText = linkNode && linkNode.textContent ? linkNode.textContent : null;
+          const pubDateText = pubDateNode && pubDateNode.textContent ? pubDateNode.textContent : null;
+          const sourceText = sourceNode && sourceNode.textContent ? sourceNode.textContent : null;
+
+          return {
+            source: { id: null, name: sourceText ?? "Google News" },
+            author: null,
+            title: titleText,
+            description: descText,
+            url: linkText,
+            urlToImage: null,
+            publishedAt: pubDateText,
+            content: null
+          };
+        });
+
+        // Fallback si no hay resultados específicos para el equipo:
+        if (mapped.length === 0) {
+          const resFallback = await fetch(`/api/rss?q=${encodeURIComponent("LaLiga fútbol")}`);
+          if (resFallback.ok) {
+            const xmlFallback = await resFallback.text();
+            const docFallback = parser.parseFromString(xmlFallback, "application/xml");
+            const itemsFallbackNodeList = docFallback.getElementsByTagName("item");
+            const itemsFallback: Element[] = [];
+            for (let i = 0; i < itemsFallbackNodeList.length; i++) {
+              const node = itemsFallbackNodeList.item(i);
+              if (node) itemsFallback.push(node);
+            }
+            const mappedFallback: NewsArticle[] = itemsFallback.map((item) => {
+              const titleNode = item.getElementsByTagName("title").item(0);
+              const descNode = item.getElementsByTagName("description").item(0);
+              const linkNode = item.getElementsByTagName("link").item(0);
+              const pubDateNode = item.getElementsByTagName("pubDate").item(0);
+              const sourceNode = item.getElementsByTagName("source").item(0);
+
+              const titleText = titleNode && titleNode.textContent ? titleNode.textContent : null;
+              const descText = descNode && descNode.textContent ? descNode.textContent : null;
+              const linkText = linkNode && linkNode.textContent ? linkNode.textContent : null;
+              const pubDateText = pubDateNode && pubDateNode.textContent ? pubDateNode.textContent : null;
+              const sourceText = sourceNode && sourceNode.textContent ? sourceNode.textContent : null;
+
+              return {
+                source: { id: null, name: sourceText ?? "Google News" },
+                author: null,
+                title: titleText,
+                description: descText,
+                url: linkText,
+                urlToImage: null,
+                publishedAt: pubDateText,
+                content: null
+              };
+            });
+
+            setNews(mappedFallback.length ? mappedFallback : []);
+          } else {
+            setNews([]);
+          }
+        } else {
+          setNews(mapped);
+        }
       } catch {
         setNewsError("Error al obtener noticias RSS (proxy).");
         setNews([]);
