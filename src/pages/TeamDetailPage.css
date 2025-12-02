@@ -145,7 +145,43 @@
 .goal-top { top: 1%; } .goal-bottom { bottom: 1%; }
 
 /* slots moved up a bit */
-.field-slot-absolute { position: absolute; transform: translate(-50%, -70%); min-width: 120px; max-width: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; z-index: 10; }
+.field-slot-absolute {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none; /* por defecto, para que solo la zona interna reciba eventos */
+}
+
+/* Visual del slot (chip o +) sigue recibiendo eventos */
+.field-slot-absolute .slot-visual {
+  pointer-events: auto;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Área de drop ampliada: invisible pero con hit area grande */
+.field-slot-absolute .slot-drop-area {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;   /* ancho del hit area: ajustar si quieres más grande */
+  height: 120px;  /* alto del hit area */
+  border-radius: 12px;
+  /* visual opcional para debugging: descomenta para ver el área
+  background: rgba(0, 150, 0, 0.08);
+  outline: 1px dashed rgba(0,0,0,0.06);
+  */
+  z-index: 3;
+  pointer-events: auto; /* importante: que reciba drop/drag events */
+}
+
+/* Si quieres que el área de drop muestre feedback al arrastrar */
+.field-slot-absolute .slot-drop-area.drag-over {
+  background: rgba(11,102,255,0.08);
+  outline: 2px solid rgba(11,102,255,0.12);
+}
 
 /* player chip: transparent, foto grande */
 .player-chip.vertical { position: relative; z-index: 20; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border-radius: 0; width: 120px; background: transparent; box-shadow: none; cursor: grab; }

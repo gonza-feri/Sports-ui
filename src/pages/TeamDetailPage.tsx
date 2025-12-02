@@ -444,7 +444,7 @@ useEffect(() => {
             <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
               {saving ? "Guardando..." : "Save lineup"}
             </button>
-            <button className="btn btn-edit" onClick={() => { if (!id) return; navigate(`/teams/${id}/edit`); }} title="Editar equipo">Edit team</button>
+            <button className="btn btn-edit" onClick={() => { if (!id) return; navigate(`/teams/add/${id}`); }} title="Editar equipo">Edit team</button>
             {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
           </div>
           <div className="team-header-actions">
