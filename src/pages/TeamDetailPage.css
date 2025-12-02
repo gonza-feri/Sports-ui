@@ -148,36 +148,22 @@
 .field-slot-absolute {
   position: absolute;
   transform: translate(-50%, -50%);
-  pointer-events: none; /* por defecto, para que solo la zona interna reciba eventos */
-}
-
-/* Visual del slot (chip o +) sigue recibiendo eventos */
-.field-slot-absolute .slot-visual {
-  pointer-events: auto;
-  z-index: 5;
+  width: 120px;   /* área de drop más grande */
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
+  z-index: 4;
+}
+.field-slot-absolute.drag-over {
+  outline: 2px dashed rgba(11,102,255,0.4);
+  background: rgba(11,102,255,0.08);
 }
 
-/* Área de drop ampliada: invisible pero con hit area grande */
-.field-slot-absolute .slot-drop-area {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 120px;   /* ancho del hit area: ajustar si quieres más grande */
-  height: 120px;  /* alto del hit area */
-  border-radius: 12px;
-  /* visual opcional para debugging: descomenta para ver el área
-  background: rgba(0, 150, 0, 0.08);
-  outline: 1px dashed rgba(0,0,0,0.06);
-  */
-  z-index: 3;
-  pointer-events: auto; /* importante: que reciba drop/drag events */
-}
+.field-slot-absolute .slot-visual { pointer-events: auto; z-index: 5; }
+.field-slot-absolute .slot-drop-area { pointer-events: auto; z-index: 3; width: 120px; height: 120px; }
 
-/* Si quieres que el área de drop muestre feedback al arrastrar */
 .field-slot-absolute .slot-drop-area.drag-over {
   background: rgba(11,102,255,0.08);
   outline: 2px solid rgba(11,102,255,0.12);
@@ -193,7 +179,7 @@
 /* Bench column */
 .bench-area { width: 360px; overflow: auto; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.03); box-sizing: border-box; }
 .bench-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; padding-bottom: 12px; }
-.bench-player { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); cursor: grab; }
+.bench-player { pointer-events: auto; display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); cursor: grab; }
 .bench-player.assigned { display: none; }
 .bench-photo { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
 .bench-info.small { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
