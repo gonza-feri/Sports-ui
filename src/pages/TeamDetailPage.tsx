@@ -14,7 +14,7 @@ type LineupSlot = {
   playerId?: number | string | null;
   left?: string;
   top?: string;
-  noAutoFill?: boolean; // si true, este slot NO será auto-llenado por la rutina ensureFieldNotEmpty
+  noAutoFill?: boolean;
 };
 
 type TeamWithExtras = Team & { logo?: string; crest?: string; photo?: string; lineup?: LineupSlot[] };
@@ -66,7 +66,6 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
   }));
   const available = starters.slice();
 
-  // Intentar asignar por posición
   for (const slot of lineup) {
     const idx = available.findIndex((p) =>
       (p.positions || []).some((pos) => posMatchesHint(pos, slot.positionHint))
@@ -77,7 +76,6 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
     }
   }
 
-  // Rellenar huecos con titulares restantes
   for (const slot of lineup) {
     if (!slot.playerId && available.length) {
       slot.playerId = available.shift()!.id;
@@ -170,7 +168,6 @@ export default function TeamDetailPage(): JSX.Element {
     const built = buildInitialLineup(DEFAULT_SLOTS_TEMPLATE, players);
     setInitialLineup(built);
 
-    // Preferencia: backend lineup si existe y tiene algo, luego local storage, si no built
     const backendLineupCandidate = team.lineup;
     const backendIsValid = Array.isArray(backendLineupCandidate) && backendLineupCandidate.some((s) => s && s.playerId !== null && s.playerId !== undefined);
     if (backendIsValid) {
@@ -210,12 +207,13 @@ export default function TeamDetailPage(): JSX.Element {
   function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
+    // Guardamos el fromSlotId para que el drop pueda distinguir bench vs field
     e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
     e.dataTransfer.effectAllowed = "move";
   }
 
   function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
-    // Seguridad: si el jugador no es titular, no iniciamos el drag
+    // Defensa: si por alguna razón se intenta iniciar drag, comprobamos que el jugador sea titular
     const dragged = playersById.get(String(playerId));
     if (!dragged || !dragged.isStarter) {
       e.preventDefault();
@@ -224,13 +222,14 @@ export default function TeamDetailPage(): JSX.Element {
 
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
+    // fromSlotId vacío indica bench
     e.dataTransfer.setData("text/plain", `${playerId}|`);
     e.dataTransfer.effectAllowed = "move";
   }
 
   function onDragOverSlot(e: React.DragEvent) {
+    // No leer dataTransfer aquí: algunos navegadores devuelven vacío en dragover.
     e.preventDefault();
-    // Siempre permitir visualmente el drop; la validación real se hace en onDropToSlot
     e.dataTransfer.dropEffect = "move";
     (e.currentTarget as HTMLElement).classList.add("drag-over");
   }
@@ -256,19 +255,18 @@ export default function TeamDetailPage(): JSX.Element {
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
 
-    const [pidRaw] = raw.split("|");
+    // payload: "playerId|fromSlotId" where fromSlotId === "" means bench
+    const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
+    const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
 
-    // Validación temprana: si el jugador viene del bench (no está en ningún slot)
-    // y NO es titular, no hacemos NINGÚN cambio (retornamos antes de setState)
+    // Validación temprana: si viene del bench y NO es titular, no hacemos NINGÚN cambio
     const draggedPlayer = playersById.get(String(pid));
-    const isFromField = fieldSlots.some((s) => String(s.playerId) === String(pid));
-    if (!isFromField && draggedPlayer && !draggedPlayer.isStarter) {
+    if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
       // bloqueo total: no sustituir, no vaciar, no efectos colaterales
       return;
     }
 
-    // A partir de aquí, ya podemos mutar con seguridad
     setFieldSlots((prev) => {
       const next = prev.map((s) => ({ ...s }));
       const target = next.find((s) => s.slotId === targetSlotId);
@@ -276,7 +274,6 @@ export default function TeamDetailPage(): JSX.Element {
 
       const fromSlot = next.find((s) => String(s.playerId) === String(pid));
 
-      // Protección activa o slot bloqueado: reemplazar/colocar sin auto-llenado
       if (preventAutoFillRef.current || target.noAutoFill) {
         if (fromSlot) fromSlot.playerId = null;
         target.playerId = pid;
@@ -284,7 +281,6 @@ export default function TeamDetailPage(): JSX.Element {
         return next;
       }
 
-      // Campo → campo (swap si distinto)
       if (fromSlot && fromSlot.slotId !== target.slotId) {
         const temp = target.playerId;
         target.playerId = fromSlot.playerId;
@@ -294,7 +290,6 @@ export default function TeamDetailPage(): JSX.Element {
         return ensuredSwap;
       }
 
-      // Bench (titular) → slot ocupado: sustituir
       if (!fromSlot && target.playerId) {
         target.playerId = pid;
         const ensuredReplace = ensureFieldNotEmpty(next, players);
@@ -302,7 +297,6 @@ export default function TeamDetailPage(): JSX.Element {
         return ensuredReplace;
       }
 
-      // Bench (titular) → slot vacío: asignar
       target.playerId = pid;
       const ensured = ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, ensured);
@@ -314,8 +308,15 @@ export default function TeamDetailPage(): JSX.Element {
     e.preventDefault();
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
-    const [pidRaw] = raw.split("|");
+    const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
+    const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
+
+    // Si el drag viene del bench y el jugador no es titular, no hacemos nada
+    const draggedPlayer = playersById.get(String(pid));
+    if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
+      return;
+    }
 
     setFieldSlots((prev) => {
       const next = prev.map((s) => ({ ...s }));
@@ -331,7 +332,7 @@ export default function TeamDetailPage(): JSX.Element {
     e.preventDefault();
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
-    const [pidRaw] = raw.split("|");
+    const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
     if (String(pid) === String(benchPlayerId)) return;
 
@@ -341,12 +342,18 @@ export default function TeamDetailPage(): JSX.Element {
       return;
     }
 
+    // Si el drag viene del bench y el arrastrado no es titular, bloquear
+    const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
+    const draggedPlayer = playersById.get(String(pid));
+    if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
+      return;
+    }
+
     setFieldSlots(prev => {
       const next = prev.map(s => ({ ...s }));
       const fromSlot = next.find(s => String(s.playerId) === String(pid));
       if (!fromSlot) return prev;
 
-      // El titular del bench entra al slot de origen del jugador del campo
       fromSlot.playerId = benchPlayerId;
       if (id) saveLineupToStorage(id, next);
       return next;
@@ -396,7 +403,7 @@ export default function TeamDetailPage(): JSX.Element {
     }
   }
 
-  /* ---------- Noticias del equipo (con alias, dominios y filtros) ---------- */
+  /* ---------- Noticias del equipo (opcional) ---------- */
   const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898";
 
   const teamAliases = useMemo(() => {
@@ -411,15 +418,6 @@ export default function TeamDetailPage(): JSX.Element {
       `${name} Club de Fútbol`,
     ]);
 
-    const lower = name.toLowerCase();
-    if (lower === "real madrid" || lower.includes("real madrid")) {
-      base.add("Real Madrid C.F.");
-      base.add("Los Blancos");
-    }
-    if (lower.includes("barcelona") || lower.includes("fc barcelona")) {
-      base.add("FC Barcelona");
-      base.add("Barça");
-    }
     return Array.from(base);
   }, [team?.name]);
 
@@ -630,7 +628,7 @@ export default function TeamDetailPage(): JSX.Element {
                   <div
                     key={p.id}
                     className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
-                    draggable={true} // titulares siempre arrastrables
+                    draggable={Boolean(p.isStarter)}
                     onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = p.isStarter ? "move" : "none"; }}
                     onDrop={(e) => { if (!p.isStarter) return; onDropOnBenchPlayer(e, p.id!); }}
@@ -652,8 +650,15 @@ export default function TeamDetailPage(): JSX.Element {
                   <div
                     key={p.id}
                     className="bench-player bench-not-allowed"
-                    draggable={false} // explícito: no arrastrables
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
+                    draggable={false}
+                    onDragStart={(e) => {
+                      // Prevención explícita: evitar cualquier inicio de drag desde suplentes
+                      e.preventDefault();
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "none";
+                    }}
                     title={p.name}
                   >
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
@@ -672,11 +677,17 @@ export default function TeamDetailPage(): JSX.Element {
                   <div
                     key={p.id}
                     className="bench-player bench-not-allowed"
-                    draggable={false} // explícito: no arrastrables
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
+                    draggable={false}
+                    onDragStart={(e) => {
+                      // Prevención explícita: evitar cualquier inicio de drag desde no titulares
+                      e.preventDefault();
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "none";
+                    }}
                     title={p.name}
                   >
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                     <div className="bench-info small">
                       <div className="bench-name">{p.name ?? "Unknown player"}</div>
