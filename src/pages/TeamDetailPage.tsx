@@ -213,7 +213,15 @@ export default function TeamDetailPage(): JSX.Element {
     e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
     e.dataTransfer.effectAllowed = "move";
   }
+
   function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
+    // Seguridad: si el jugador no es titular, no iniciamos el drag
+    const dragged = playersById.get(String(playerId));
+    if (!dragged || !dragged.isStarter) {
+      e.preventDefault();
+      return;
+    }
+
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
     e.dataTransfer.setData("text/plain", `${playerId}|`);
@@ -222,15 +230,10 @@ export default function TeamDetailPage(): JSX.Element {
 
   function onDragOverSlot(e: React.DragEvent) {
     e.preventDefault();
-    const raw = e.dataTransfer.getData("text/plain");
-    const [pidRaw] = raw?.split("|") ?? [""];
-    const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
-    const draggedPlayer = playersById.get(String(pid));
-
-    e.dataTransfer.dropEffect = draggedPlayer && draggedPlayer.isStarter ? "move" : "none";
+    // Siempre permitir visualmente el drop; la validación real se hace en onDropToSlot
+    e.dataTransfer.dropEffect = "move";
     (e.currentTarget as HTMLElement).classList.add("drag-over");
   }
-
 
   function ensureFieldNotEmpty(nextSlots: LineupSlot[], currentPlayers: Player[]) {
     if (preventAutoFillRef.current) return nextSlots;
@@ -252,21 +255,26 @@ export default function TeamDetailPage(): JSX.Element {
     e.preventDefault();
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
+
     const [pidRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
 
+    // Validación temprana: si el jugador viene del bench (no está en ningún slot)
+    // y NO es titular, no hacemos NINGÚN cambio (retornamos antes de setState)
+    const draggedPlayer = playersById.get(String(pid));
+    const isFromField = fieldSlots.some((s) => String(s.playerId) === String(pid));
+    if (!isFromField && draggedPlayer && !draggedPlayer.isStarter) {
+      // bloqueo total: no sustituir, no vaciar, no efectos colaterales
+      return;
+    }
+
+    // A partir de aquí, ya podemos mutar con seguridad
     setFieldSlots((prev) => {
       const next = prev.map((s) => ({ ...s }));
       const target = next.find((s) => s.slotId === targetSlotId);
       if (!target) return prev;
 
       const fromSlot = next.find((s) => String(s.playerId) === String(pid));
-      const draggedPlayer = playersById.get(String(pid));
-
-      // Bloqueo: si NO es titular y viene del bench (no fromSlot), no hacer nada
-      if (!fromSlot && draggedPlayer && !draggedPlayer.isStarter) {
-        return prev;
-      }
 
       // Protección activa o slot bloqueado: reemplazar/colocar sin auto-llenado
       if (preventAutoFillRef.current || target.noAutoFill) {
@@ -330,7 +338,6 @@ export default function TeamDetailPage(): JSX.Element {
     // Validar que el jugador destino en el bench sea titular
     const benchPlayer = playersById.get(String(benchPlayerId));
     if (!benchPlayer || !benchPlayer.isStarter) {
-      // Opción: feedback visual (cursor no permitido) ya lo gestionamos en onDragOver del bench-player
       return;
     }
 
@@ -339,7 +346,7 @@ export default function TeamDetailPage(): JSX.Element {
       const fromSlot = next.find(s => String(s.playerId) === String(pid));
       if (!fromSlot) return prev;
 
-      // Swap permitido: el titular del bench entra al slot de origen del jugador del campo
+      // El titular del bench entra al slot de origen del jugador del campo
       fromSlot.playerId = benchPlayerId;
       if (id) saveLineupToStorage(id, next);
       return next;
@@ -404,7 +411,6 @@ export default function TeamDetailPage(): JSX.Element {
       `${name} Club de Fútbol`,
     ]);
 
-    // Alias específicos conocidos (ejemplos; puedes ampliar)
     const lower = name.toLowerCase();
     if (lower === "real madrid" || lower.includes("real madrid")) {
       base.add("Real Madrid C.F.");
@@ -421,7 +427,6 @@ export default function TeamDetailPage(): JSX.Element {
     const text = `${a.title ?? ""} ${a.description ?? ""}`.toLowerCase();
     return aliases.some((alias) => {
       const al = alias.toLowerCase();
-      // Coincidencia de palabra/frase completa
       return text.includes(al);
     });
   }
@@ -443,7 +448,6 @@ export default function TeamDetailPage(): JSX.Element {
           return;
         }
 
-        // Query con alias y filtros de fútbol; limitar a dominios deportivos en español para mayor relevancia
         const q = `(${teamAliases.map((a) => `"${a}"`).join(" OR ")}) AND (fútbol OR soccer OR LaLiga) NOT (baloncesto OR basket)`;
         const domains = [
           "marca.com",
@@ -454,7 +458,7 @@ export default function TeamDetailPage(): JSX.Element {
           "goal.com",
           "eurosport.com",
           "espn.com",
-          "bbc.com", // opcional
+          "bbc.com",
         ].join(",");
 
         const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=es&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(domains)}&searchIn=title,description&apiKey=${apiKey}`;
@@ -466,7 +470,6 @@ export default function TeamDetailPage(): JSX.Element {
 
         const articles: NewsArticle[] = Array.isArray(data.articles) ? data.articles : [];
 
-        // Dedupe por (url || title+publishedAt)
         const seen = new Set<string>();
         const deduped = articles.filter((a) => {
           const key = (a.url ?? `${a.title}-${a.publishedAt}`) as string;
@@ -475,9 +478,7 @@ export default function TeamDetailPage(): JSX.Element {
           return true;
         });
 
-        // Filtrado adicional por coincidencia en título/description con alias
         const filtered = deduped.filter((a) => articleMatchesTeam(a, teamAliases));
-
         setNews(filtered);
       } catch (err) {
         console.error("load news failed", err);
@@ -615,24 +616,24 @@ export default function TeamDetailPage(): JSX.Element {
               </div>
             </div>
 
-            <aside className="bench-area" aria-label="Bench and full squad" ref={benchRef} onDragOver={(e) => { e.preventDefault(); }} onDrop={onDropToBench} style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}>
+            <aside
+              className="bench-area"
+              aria-label="Bench and full squad"
+              ref={benchRef}
+              onDragOver={(e) => { e.preventDefault(); }}
+              onDrop={onDropToBench}
+              style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
+            >
               <h3>Titulares</h3>
               <div className="bench-list">
                 {startersBench.map((p) => (
                   <div
                     key={p.id}
                     className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
-                    draggable={Boolean(p.isStarter)}
+                    draggable={true} // titulares siempre arrastrables
                     onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      // Si NO es titular, señalamos que no se puede soltar aquí
-                      e.dataTransfer.dropEffect = p.isStarter ? "move" : "none";
-                    }}
-                    onDrop={(e) => {
-                      if (!p.isStarter) return;           // bloquear drop sobre no titular
-                      onDropOnBenchPlayer(e, p.id!);      // permitir solo si es titular
-                    }}
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = p.isStarter ? "move" : "none"; }}
+                    onDrop={(e) => { if (!p.isStarter) return; onDropOnBenchPlayer(e, p.id!); }}
                     title={p.name}
                   >
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
@@ -650,18 +651,9 @@ export default function TeamDetailPage(): JSX.Element {
                 {substitutesBench.map((p) => (
                   <div
                     key={p.id}
-                    className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
-                    draggable={Boolean(p.isStarter)}
-                    onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      // Si NO es titular, señalamos que no se puede soltar aquí
-                      e.dataTransfer.dropEffect = p.isStarter ? "move" : "none";
-                    }}
-                    onDrop={(e) => {
-                      if (!p.isStarter) return;           // bloquear drop sobre no titular
-                      onDropOnBenchPlayer(e, p.id!);      // permitir solo si es titular
-                    }}
+                    className="bench-player bench-not-allowed"
+                    draggable={false} // explícito: no arrastrables
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
                     title={p.name}
                   >
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
@@ -679,21 +671,12 @@ export default function TeamDetailPage(): JSX.Element {
                 {nonStartersBench.map((p) => (
                   <div
                     key={p.id}
-                    className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
-                    draggable={Boolean(p.isStarter)}
-                    onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      // Si NO es titular, señalamos que no se puede soltar aquí
-                      e.dataTransfer.dropEffect = p.isStarter ? "move" : "none";
-                    }}
-                    onDrop={(e) => {
-                      if (!p.isStarter) return;           // bloquear drop sobre no titular
-                      onDropOnBenchPlayer(e, p.id!);      // permitir solo si es titular
-                    }}
+                    className="bench-player bench-not-allowed"
+                    draggable={false} // explícito: no arrastrables
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
                     title={p.name}
                   >
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                     <div className="bench-info small">
                       <div className="bench-name">{p.name ?? "Unknown player"}</div>
