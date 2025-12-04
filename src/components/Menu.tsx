@@ -8,21 +8,19 @@ export default function Menu() {
   const isTeamsAdd = location.pathname.startsWith("/teams/add");
 
   // 👇 estado para mostrar/ocultar el header
-  const [showHeader, setShowHeader] = useState(true);
-  let lastScrollY = 0;
+  const [showHeader, ] = useState(true);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > lastScrollY) {
-        setShowHeader(false); // bajando → ocultar
-      } else {
-        setShowHeader(true); // subiendo → mostrar
+    const headerEl = document.querySelector(".app-header") as HTMLElement | null;
+    const updateOffset = () => {
+      if (headerEl) {
+        const height = headerEl.offsetHeight;
+        document.documentElement.style.setProperty("--top-offset", `${height}px`);
       }
-      lastScrollY = window.scrollY;
     };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    updateOffset();
+    window.addEventListener("resize", updateOffset);
+    return () => window.removeEventListener("resize", updateOffset);
   }, []);
 
   // 👇 función genérica para confirmar salida

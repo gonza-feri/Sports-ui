@@ -1,102 +1,123 @@
-import { useEffect, useState } from "react";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
+// src/components/FootballNews.tsx
+import React, { useEffect, useState } from "react";
+import "./FootballNews.css";
 
-type Article = {
-  title: string;
-  url: string;
+type NewsArticle = {
+  source?: { id?: string | null; name?: string | null };
+  author?: string | null;
+  title?: string | null;
+  description?: string | null;
+  url?: string | null;
   urlToImage?: string | null;
-  source: { name: string };
+  publishedAt?: string | null;
+  content?: string | null;
 };
 
-const placeholderImg =
-  "https://images.unsplash.com/photo-1521417532886-55d2f88f0a52?q=80&w=1200&auto=format&fit=crop"; // placeholder neutro
-
-function NewsSkeleton() {
-  return (
-    <section className="news-carousel">
-      <h2>International Football News</h2>
-      <div className="news-card skeleton">
-        <div className="img-skeleton" />
-        <div className="text-skeleton" />
-        <div className="text-skeleton short" />
-      </div>
-    </section>
-  );
-}
-
 export default function FootballNews() {
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898"; // tu API key
+
   useEffect(() => {
-    fetch(
-      `https://newsapi.org/v2/everything?q=soccer&language=en&apiKey=6866d2f9cd2b482da43ecda2e5fdf898`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data?.articles) {
-          setError("No news available");
+    let cancelled = false;
+    async function loadNews() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        if (!NEWSAPI_KEY) {
+          setError("No hay API key configurada para noticias.");
+          setArticles([]);
           return;
         }
-        const cleaned = (data.articles as Article[])
-          .filter((a) => a?.title && a?.url) // asegurar datos básicos
-          .slice(0, 8); // máximo 8
-        setArticles(cleaned);
-      })
-      .catch(() => setError("Error fetching news"));
-  }, []);
 
-  const settings = {
-    dots: true,
-    infinite: true,
-    speed: 500,
-    slidesToShow: 1,
-    slidesToScroll: 1,
-    autoplay: true,
-    autoplaySpeed: 4500,
-    adaptiveHeight: true,
-    arrows: true,
-  } as const;
+        const url = `https://newsapi.org/v2/everything?q=fútbol&language=es&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
+        const data = await res.json();
+        if (cancelled) return;
 
-  if (error && articles.length === 0) {
-    return (
-      <section className="news-carousel">
-        <h2>International Football News</h2>
-        <p className="news-error">Unable to load news right now.</p>
-      </section>
-    );
-  }
+        const items: NewsArticle[] = Array.isArray(data.articles) ? data.articles : [];
+        setArticles(items);
+      } catch (err) {
+        console.error("load news failed", err);
+        if (!cancelled) {
+          setError("No se pudieron cargar noticias.");
+          setArticles([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
 
-  return articles.length > 0 ? (
-    <section className="news-carousel">
-      <h2>International Football News</h2>
-      <Slider {...settings}>
-        {articles.map((a, i) => (
-          <div key={`${a.url}-${i}`} className="news-card">
-            <img
-              src={a.urlToImage || placeholderImg}
-              alt={a.title}
-              className="news-img"
-            />
-            <div className="news-content">
-              <h3 className="news-title">{a.title}</h3>
-              <p className="news-source">{a.source?.name || "Unknown source"}</p>
-              <a
-                href={a.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="news-link"
-              >
-                Read more
-              </a>
-            </div>
-          </div>
-        ))}
-      </Slider>
+    loadNews();
+    return () => { cancelled = true; };
+  }, [NEWSAPI_KEY]);
+
+  return (
+    <section className="football-news">
+      <h3>Últimas noticias de fútbol</h3>
+
+      {loading && <p>Cargando noticias...</p>}
+      {error && <p className="news-error">{error}</p>}
+      {!loading && !error && articles.length === 0 && (
+        <p>No se han encontrado noticias recientes.</p>
+      )}
+
+      {!loading && !error && articles.length > 0 && (
+        <div className="news-scroll" role="region" aria-label="Carrusel de noticias">
+          {articles.map((a) => (
+            <article key={a.url ?? `${a.title}-${a.publishedAt}`} className="news-card">
+              {a.urlToImage && (
+                <img src={a.urlToImage ?? ""} alt={a.title ?? ""} className="news-thumb" />
+              )}
+              <div className="news-body">
+                <a
+                  href={a.url ?? "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="news-title"
+                >
+                  {a.title}
+                </a>
+                <p className="news-source">
+                  {a.source?.name ?? "Fuente"} ·{" "}
+                  {a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : ""}
+                </p>
+                <p className="news-desc">{a.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+
+      {/* Controles de scroll accesibles (opcionales) */}
+      {!loading && !error && articles.length > 0 && (
+        <div className="news-controls">
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const el = document.querySelector(".news-scroll");
+              if (el) el.scrollBy({ left: -320, behavior: "smooth" });
+            }}
+          >
+            ◀︎
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              const el = document.querySelector(".news-scroll");
+              if (el) el.scrollBy({ left: 320, behavior: "smooth" });
+            }}
+          >
+            ▶︎
+          </button>
+        </div>
+      )}
     </section>
-  ) : (
-    <NewsSkeleton />
   );
 }

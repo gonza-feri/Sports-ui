@@ -1,0 +1,80 @@
+/* Contenedor general */
+.football-news {
+  max-width: 1100px;
+  margin: 2rem auto;
+  color: #fff;
+}
+
+/* Carrusel por scroll horizontal */
+.news-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 4px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tarjetas fijas en ancho para el carrusel */
+.news-card {
+  flex: 0 0 auto;
+  width: 300px;              /* ajusta a tu diseño */
+  scroll-snap-align: start;
+  background: #1e1e2f;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Imagen de portada */
+.news-thumb {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+/* Estilos de texto */
+.news-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ff4d4d;
+  text-decoration: none;
+}
+
+.news-title:hover { text-decoration: underline; }
+
+.news-source {
+  font-size: 0.85rem;
+  color: #bbb;
+  margin: 0.4rem 0;
+}
+
+.news-desc {
+  font-size: 0.95rem;
+  color: #ddd;
+}
+
+/* Controles opcionales */
+.news-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.news-controls .btn {
+  background: #2a2a3d;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.news-controls .btn:hover {
+  background: #35354b;
+}

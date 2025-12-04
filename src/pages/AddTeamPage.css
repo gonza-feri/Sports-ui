@@ -233,17 +233,16 @@
 
 /* Barra superior */
 .form-top-actions {
-  position: sticky;
-  top: var(--top-offset);
-  z-index: 1200; /* suficientemente alto para estar por encima del contenido, pero si tu banner tiene z-index mayor, ajusta JS para poner --top-offset */
+  position: sticky;           /* o fixed si prefieres que esté fuera del flujo */
+  top: 69px;                  /* ajusta según la altura del menú superior */
+  z-index: 1000;
+  background: #181827;        /* mismo fondo que el resto de la app */
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: rgba(8,10,14,0.88); /* semitransparente para integrarse con la web */
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 /* contenedores para alinear izquierda/derecha */

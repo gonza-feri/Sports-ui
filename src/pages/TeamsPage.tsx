@@ -1,112 +1,194 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+// src/pages/TeamsPage.tsx
+import React, { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import type { Team, Player } from "../types/types";
 import Menu from "../components/Menu";
 import FloatingButton from "../components/FloatingButton";
+import "./TeamsPage.css";
+
+type Team = {
+  id: number;
+  name: string;
+  description?: string;
+  logo?: string;
+};
 
 export default function TeamsPage() {
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const wrapperRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const menuElements = document.querySelectorAll(".menu-dropdown");
-      const clickedInsideMenu = Array.from(menuElements).some(el => el.contains(e.target as Node));
-      if (!clickedInsideMenu) {
+    let cancelled = false;
+    async function loadTeams() {
+      try {
+        setLoading(true);
+        const res = await api.get("/teams");
+        if (!cancelled) setTeams(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        console.error("Error loading teams", err);
+        setError("No se pudieron cargar los equipos.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    loadTeams();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // cerrar menú al click fuera o Escape
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!wrapperRef.current) {
+        setOpenMenu(null);
+        return;
+      }
+      if (!wrapperRef.current.contains(target as Node)) {
+        setOpenMenu(null);
+        return;
+      }
+      if (!target.closest(".menu-dropdown") && !target.closest(".menu-button")) {
         setOpenMenu(null);
       }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const load = async () => {
-      const [teamsRes, playersRes] = await Promise.all([api.get("/teams"), api.get("/players")]);
-      setTeams(teamsRes.data);
-      setPlayers(playersRes.data);
-    };
-    load();
-  }, []);
-
-  const handleEdit = (teamId: number) => {
-    navigate(`/teams/add/${String(teamId)}`);
-  };
-
-  const handleOpen = (teamId: number) => {
-    navigate(`/teams/${String(teamId)}`);
-  };
-
-  const deleteTeamCascade = async (team: Team) => {
-    if (!window.confirm("Are you sure you want to delete this team?")) return;
-    try {
-      const relatedPlayers = players.filter((p) => p.teamId !== undefined && p.teamId === team.id);
-      await Promise.all(relatedPlayers.map((p) => api.delete(`/players/${p.id}`)));
-      await api.delete(`/teams/${team.id}`);
-      setTeams((prev) => prev.filter((t) => t.id !== team.id));
-      setPlayers((prev) => prev.filter((p) => p.teamId !== team.id));
-    } catch (error) {
-      console.error("Error deleting team:", error);
-      alert("No se pudo borrar el equipo. Revisa el servidor o la consola.");
     }
-  };
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpenMenu(null);
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
+  async function handleDelete(teamId: number) {
+    const confirmDelete = window.confirm("¿Seguro que quieres eliminar este equipo?");
+    if (!confirmDelete) return;
+    try {
+      await api.delete(`/teams/${teamId}`);
+      setTeams((prev) => prev.filter((t) => t.id !== teamId));
+      setOpenMenu((prev) => (prev === teamId ? null : prev));
+    } catch (err) {
+      console.error("Error deleting team", err);
+      alert("No se pudo eliminar el equipo.");
+    }
+  }
+
+  const filteredTeams = teams.filter((t) =>
+    t.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <section className="teams-page">
+    <div>
       <Menu />
+      <section className="page-wrapper" ref={wrapperRef}>
+        <h2>Equipos</h2>
 
-      <div className="teams-header">
-        <h2>Teams</h2>
-      </div>
+        {/* Buscador */}
+        <div className="team-search">
+          <input
+            type="text"
+            placeholder="Buscar equipo..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
 
-      <ul className="team-list">
-        {teams.map((team) => (
-          <li key={team.id} className={`team-card ${openMenu === team.id ? "menu-open" : ""}`}>
-            <div className="card-content team-row">
-              {team.logo && (
-                <img src={team.logo} alt={`${team.name} logo`} className="team-logo" />
-              )}
-              <Link to={`/teams/${String(team.id)}`} className="team-link">
-                <span className="team-name">{team.name}</span>
-              </Link>
+        {loading && <p>Cargando equipos...</p>}
+        {error && <p className="error">{error}</p>}
 
-              <div className="team-actions">
+        <ul className="team-list" role="list">
+          {filteredTeams.map((team) => (
+            <li
+              key={team.id}
+              className={`team-card ${openMenu === team.id ? "is-open" : ""}`}
+              onClick={() => navigate(`/teams/${team.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") navigate(`/teams/${team.id}`);
+              }}
+            >
+              <div className="team-left" aria-hidden>
+                <div className="team-logo-wrap">
+                  <img
+                    src={team.logo || ""}
+                    alt={`${team.name} logo`}
+                    className="team-logo"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+
+              <div className="team-center">
+                <h3 className="team-name">{team.name}</h3>
+              </div>
+
+              <div className="team-right" onClick={(e) => e.stopPropagation()}>
                 <button
                   className="menu-button"
-                  onClick={() =>
-                    setOpenMenu(prev => (prev === team.id ? null : team.id))
-                  }
-                  aria-label="Open actions"
+                  aria-haspopup="true"
+                  aria-expanded={openMenu === team.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenu(openMenu === team.id ? null : team.id);
+                  }}
+                  title="Abrir menú"
                 >
                   ⋮
                 </button>
 
                 {openMenu === team.id && (
-                  <div className="menu-dropdown">
-                    <button className="menu-item" onClick={() => handleOpen(team.id)}>
-                      Open team
-                    </button>
-                    <button className="menu-item" onClick={() => handleEdit(team.id)}>
-                      Edit
-                    </button>
-                    <button className="menu-item" onClick={() => deleteTeamCascade(team)}>
-                      Delete
-                    </button>
-                  </div>
+                  <ul className="menu-dropdown" role="menu" aria-label={`Opciones ${team.name}`}>
+                    <li
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenu(null);
+                        navigate(`/teams/${team.id}`);
+                      }}
+                    >
+                      Entrar
+                    </li>
+                    <li
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenu(null);
+                        navigate(`/teams/add/${team.id}`);
+                      }}
+                    >
+                      Editar
+                    </li>
+                    <li
+                      role="menuitem"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenu(null);
+                        handleDelete(team.id);
+                      }}
+                    >
+                      Eliminar
+                    </li>
+                  </ul>
                 )}
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-      <FloatingButton onClick={() => navigate("/teams/add")} />
-    </section>
+      <FloatingButton aria-label="Añadir equipo" onClick={() => navigate("/teams/add")} />
+    </div>
   );
 }

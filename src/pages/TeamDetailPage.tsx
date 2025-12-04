@@ -125,19 +125,26 @@ export default function TeamDetailPage(): JSX.Element {
   const preventAutoFillRef = useRef<boolean>(preventAutoFill);
   useEffect(() => { preventAutoFillRef.current = preventAutoFill; }, [preventAutoFill]);
 
-  /* ---------- Carga del equipo ---------- */
+  /* ---------- Carga del equipo y jugadores desde API ---------- */
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         setLoading(true);
         if (!id) { setError("Team id missing"); setLoading(false); return; }
-        const res = await api.get(`/teams/${id}`);
+
+        // Cargar equipo y jugadores del equipo desde json-server
+        const [teamRes, playersRes] = await Promise.all([
+          api.get(`/teams/${id}`),
+          api.get(`/players`, { params: { teamId: id } }),
+        ]);
         if (cancelled) return;
-        const t = res.data as TeamWithExtras;
+
+        const t = teamRes.data as TeamWithExtras;
         setTeam(t);
-        const rawPlayers = Array.isArray((t as { players?: unknown }).players) ? (t.players as unknown[]) : [];
-        const pls: Player[] = rawPlayers.map((pRaw) => {
+
+        const plsRaw: unknown[] = Array.isArray(playersRes.data) ? playersRes.data : [];
+        const pls: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
           return {
             id: (p.id as number) ?? (p.id as string) ?? Math.random().toString(36).slice(2),
@@ -149,10 +156,11 @@ export default function TeamDetailPage(): JSX.Element {
             isStarter: Boolean(p.isStarter),
           } as Player;
         });
+
         setPlayers(pls);
       } catch (err) {
         console.error(err);
-        setError("No se pudo cargar el equipo.");
+        setError("No se pudo cargar el equipo o sus jugadores.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -417,7 +425,6 @@ export default function TeamDetailPage(): JSX.Element {
       `${name} F.C.`,
       `${name} Club de Fútbol`,
     ]);
-
     return Array.from(base);
   }, [team?.name]);
 
@@ -651,14 +658,8 @@ export default function TeamDetailPage(): JSX.Element {
                     key={p.id}
                     className="bench-player bench-not-allowed"
                     draggable={false}
-                    onDragStart={(e) => {
-                      // Prevención explícita: evitar cualquier inicio de drag desde suplentes
-                      e.preventDefault();
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "none";
-                    }}
+                    onDragStart={(e) => { e.preventDefault(); }}
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
                     title={p.name}
                   >
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
@@ -678,14 +679,8 @@ export default function TeamDetailPage(): JSX.Element {
                     key={p.id}
                     className="bench-player bench-not-allowed"
                     draggable={false}
-                    onDragStart={(e) => {
-                      // Prevención explícita: evitar cualquier inicio de drag desde no titulares
-                      e.preventDefault();
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = "none";
-                    }}
+                    onDragStart={(e) => { e.preventDefault(); }}
+                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
                     title={p.name}
                   >
                     <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
@@ -710,19 +705,11 @@ export default function TeamDetailPage(): JSX.Element {
             )}
             {!newsLoading && !newsError && news && news.length > 0 && (
               <div className="news-list">
-                {news.map((a) => (
-                  <article key={a.url ?? `${a.title}-${a.publishedAt}`} className="news-item">
-                    {a.urlToImage && <img src={a.urlToImage ?? ""} alt={a.title ?? ""} className="news-thumb" />}
-                    <div className="news-body">
-                      <a href={a.url ?? "#"} target="_blank" rel="noopener noreferrer" className="news-title">
-                        {a.title}
-                      </a>
-                      <p className="news-source">
-                        {a.source?.name ?? "Fuente"} · {a.publishedAt ? new Date(a.publishedAt).toLocaleString() : ""}
-                      </p>
-                      <p className="news-desc">{a.description}</p>
-                    </div>
-                  </article>
+                {news.map((article) => (
+                  <div key={article.url} className="news-article">
+                    <img src={article.urlToImage ?? ""} alt={article.title ?? ""} />
+                    <p>{article.description}</p>
+                  </div>
                 ))}
               </div>
             )}
