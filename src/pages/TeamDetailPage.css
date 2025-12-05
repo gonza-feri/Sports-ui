@@ -279,3 +279,79 @@
   font-weight: 700;
   color: #fff;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.02);
+  color: #ddd;
+  border: 1px solid transparent;
+}
+
+.tab--active {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border-color: rgba(255,255,255,0.06);
+  color: #fff;
+}
+
+/* Players grid */
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* Player card */
+.player-card {
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.player-card:hover { transform: translateY(-4px); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+.player-card__img img { width:56px; height:56px; object-fit:cover; border-radius:8px; }
+.player-card__name { font-weight:600; color:#fff; }
+.player-card__number { color:#aaa; font-size:0.9rem; }
+
+/* Modal */
+.player-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+.player-modal {
+  width: min(920px, 96%);
+  max-height: 90vh;
+  overflow:auto;
+  background: #0f1220;
+  border-radius: 12px;
+  padding: 18px;
+  color: #e6eef8;
+  position: relative;
+}
+.player-modal__close {
+  position:absolute; right:12px; top:8px; background:transparent; border:none; color:#fff; font-size:22px; cursor:pointer;
+}
+.player-modal__header { display:flex; gap:16px; align-items:center; margin-bottom:12px; }
+.player-modal__header img { width:96px; height:96px; object-fit:cover; border-radius:8px; }
+.player-modal__body h3 { margin-top:12px; margin-bottom:6px; color:#cfe7ff; }
+.player-modal__wiki { color:#dbefff; }
+.player-modal__wiki--empty { color:#9aa7b8; font-style:italic; }

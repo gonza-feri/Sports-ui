@@ -7,6 +7,8 @@ import type { Team, Player } from "../types/types";
 import Menu from "../components/Menu";
 import Info from "../components/Info";
 import Warning from "../components/Warning";
+import PlayerCard from "../components/PlayerCard";
+import PlayerModal from "../components/PlayerModal";
 import "./TeamDetailPage.css";
 
 /* ---------- Tipos locales ---------- */
@@ -21,7 +23,7 @@ type LineupSlot = {
 
 type TeamWithExtras = Team & { logo?: string; crest?: string; photo?: string; lineup?: LineupSlot[] };
 
-/* ---------- Plantilla de slots (subida) ---------- */
+/* ---------- Plantilla de slots ---------- */
 const DEFAULT_SLOTS_TEMPLATE: LineupSlot[] = [
   { slotId: "GK-1", positionHint: "GK", left: "50%", top: "82%" },
   { slotId: "DEF-1", positionHint: "DEF", left: "12%", top: "68%" },
@@ -40,20 +42,37 @@ const LINEUP_STORAGE_KEY = (teamId: string | number) => `team_lineup_${teamId}`;
 
 /* ---------- Helpers de almacenamiento ---------- */
 function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
-  try { localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup));
+  } catch {
+    /* ignore */
+  }
 }
 function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
-  try { const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId)); return raw ? (JSON.parse(raw) as LineupSlot[]) : null; } catch { return null; }
+  try {
+    const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId));
+    return raw ? (JSON.parse(raw) as LineupSlot[]) : null;
+  } catch {
+    return null;
+  }
 }
-function clearLineupStorage(teamId: string | number) { try { localStorage.removeItem(LINEUP_STORAGE_KEY(teamId)); } catch { /* ignore */ } }
+function clearLineupStorage(teamId: string | number) {
+  try {
+    localStorage.removeItem(LINEUP_STORAGE_KEY(teamId));
+  } catch {
+    /* ignore */
+  }
+}
 
 /* ---------- Matching de posiciones ---------- */
 function posMatchesHint(pos: string, hint: string) {
   const p = String(pos || "").toLowerCase();
   const h = String(hint || "").toLowerCase();
   if (h === "gk") return p.includes("gk") || p.includes("goal");
-  if (h === "def") return ["cb", "lb", "rb", "fb", "def", "dc"].some((x) => p.includes(x));
-  if (h === "mid") return ["cm", "dm", "am", "mid", "mc"].some((x) => p.includes(x));
+  if (h === "def")
+    return ["cb", "lb", "rb", "fb", "def", "dc"].some((x) => p.includes(x));
+  if (h === "mid")
+    return ["cm", "dm", "am", "mid", "mc"].some((x) => p.includes(x));
   if (h === "fwd") return ["st", "cf", "fw", "att"].some((x) => p.includes(x));
   return p.includes(h);
 }
@@ -67,7 +86,6 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
     noAutoFill: false,
   }));
   const available = starters.slice();
-
   for (const slot of lineup) {
     const idx = available.findIndex((p) =>
       (p.positions || []).some((pos) => posMatchesHint(pos, slot.positionHint))
@@ -77,13 +95,11 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
       available.splice(idx, 1);
     }
   }
-
   for (const slot of lineup) {
     if (!slot.playerId && available.length) {
       slot.playerId = available.shift()!.id;
     }
   }
-
   return lineup;
 }
 
@@ -91,6 +107,8 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
 export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  /* ---------- Estado y refs (todos los hooks al inicio) ---------- */
   const [team, setTeam] = useState<TeamWithExtras | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -98,20 +116,8 @@ export default function TeamDetailPage(): JSX.Element {
 
   const [fieldSlots, setFieldSlots] = useState<LineupSlot[]>([]);
   const [, setInitialLineup] = useState<LineupSlot[] | null>(null);
-  // If "players" are already for the current team:
-  const playerCount = Array.isArray(players) ? players.length : 0;
 
-  type NewsArticle = {
-    source?: { id?: string | null; name?: string | null };
-    author?: string | null;
-    title?: string | null;
-    description?: string | null;
-    url?: string | null;
-    urlToImage?: string | null;
-    publishedAt?: string | null;
-    content?: string | null;
-  };
-  const [news, setNews] = useState<NewsArticle[] | null>(null);
+  const [news, setNews] = useState<any[] | null>(null);
   const [newsLoading, setNewsLoading] = useState<boolean>(false);
   const [newsError, setNewsError] = useState<string | null>(null);
 
@@ -121,13 +127,22 @@ export default function TeamDetailPage(): JSX.Element {
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const benchRef = useRef<HTMLDivElement | null>(null);
   const [benchHeightPx, setBenchHeightPx] = useState<number | null>(null);
-
   const [showFullDesc, setShowFullDesc] = useState<boolean>(false);
 
-  /* ---------- Prevención de auto-llenado ---------- */
   const [preventAutoFill, setPreventAutoFill] = useState<boolean>(false);
   const preventAutoFillRef = useRef<boolean>(preventAutoFill);
-  useEffect(() => { preventAutoFillRef.current = preventAutoFill; }, [preventAutoFill]);
+  useEffect(() => {
+    preventAutoFillRef.current = preventAutoFill;
+  }, [preventAutoFill]);
+
+  /* Tabs / Players UI state */
+  const [activeTab, setActiveTab] = useState<"lineup" | "players">("lineup");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+
+  /* Placeholder image used when player/team has no photo */
+  const placeholderImg =
+    "https://images.unsplash.com/photo-1521417532886-55d2f88f0a52?q=80&w=1200&auto=format&fit=crop";
 
   /* ---------- Carga del equipo y jugadores desde API ---------- */
   useEffect(() => {
@@ -135,32 +150,37 @@ export default function TeamDetailPage(): JSX.Element {
     async function load() {
       try {
         setLoading(true);
-        if (!id) { setError("Team id missing"); setLoading(false); return; }
-
-        // Cargar equipo y jugadores del equipo desde json-server
+        if (!id) {
+          setError("Team id missing");
+          setLoading(false);
+          return;
+        }
         const [teamRes, playersRes] = await Promise.all([
           api.get(`/teams/${id}`),
           api.get(`/players`, { params: { teamId: id } }),
         ]);
         if (cancelled) return;
-
         const t = teamRes.data as TeamWithExtras;
         setTeam(t);
-
         const plsRaw: unknown[] = Array.isArray(playersRes.data) ? playersRes.data : [];
         const pls: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
           return {
             id: (p.id as number) ?? (p.id as string) ?? Math.random().toString(36).slice(2),
             name: typeof p.name === "string" ? p.name : "",
-            number: typeof p.number === "number" ? p.number : (typeof p.number === "string" && !Number.isNaN(Number(p.number)) ? Number(p.number) : 0),
-            positions: Array.isArray(p.positions) ? (p.positions as string[]) : (typeof p.positions === "string" ? [p.positions as string] : []),
+            number:
+              typeof p.number === "number"
+                ? p.number
+                : typeof p.number === "string" && !Number.isNaN(Number(p.number))
+                ? Number(p.number)
+                : 0,
+            positions: Array.isArray(p.positions) ? (p.positions as string[]) : typeof p.positions === "string" ? [p.positions as string] : [],
             photo: typeof p.photo === "string" ? p.photo : null,
-            photoPreview: typeof p.photo === "string" ? p.photo : null,
+            // ensure photoPreview exists to satisfy your Player type
+            photoPreview: typeof p.photo === "string" ? (p.photo as string) : placeholderImg,
             isStarter: Boolean(p.isStarter),
           } as Player;
         });
-
         setPlayers(pls);
       } catch (err) {
         console.error(err);
@@ -170,16 +190,16 @@ export default function TeamDetailPage(): JSX.Element {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   /* ---------- Construcción de alineación inicial ---------- */
   useEffect(() => {
     if (!players || players.length === 0 || !id || !team) return;
-
     const built = buildInitialLineup(DEFAULT_SLOTS_TEMPLATE, players);
     setInitialLineup(built);
-
     const backendLineupCandidate = team.lineup;
     const backendIsValid = Array.isArray(backendLineupCandidate) && backendLineupCandidate.some((s) => s && s.playerId !== null && s.playerId !== undefined);
     if (backendIsValid) {
@@ -188,7 +208,6 @@ export default function TeamDetailPage(): JSX.Element {
       saveLineupToStorage(id, normalized);
       return;
     }
-
     const saved = loadLineupFromStorage(id);
     const savedIsValid = Array.isArray(saved) && saved.some((s) => s && s.playerId !== null && s.playerId !== undefined);
     if (savedIsValid) {
@@ -200,9 +219,12 @@ export default function TeamDetailPage(): JSX.Element {
   }, [players, id, team]);
 
   /* Persistencia local */
-  useEffect(() => { if (!id) return; saveLineupToStorage(id, fieldSlots); }, [fieldSlots, id]);
+  useEffect(() => {
+    if (!id) return;
+    saveLineupToStorage(id, fieldSlots);
+  }, [fieldSlots, id]);
 
-  /* ---------- Bench height sync ---------- */
+  /* Bench height sync */
   useLayoutEffect(() => {
     function updateBenchHeight() {
       const fieldEl = fieldRef.current;
@@ -213,34 +235,137 @@ export default function TeamDetailPage(): JSX.Element {
     updateBenchHeight();
     window.addEventListener("resize", updateBenchHeight);
     return () => window.removeEventListener("resize", updateBenchHeight);
-  }, [fieldRef.current, fieldSlots.length]);
+  }, [fieldSlots.length]);
+
+  /* ---------- Noticias del equipo (opcional) ---------- */
+  const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898";
+  const teamAliases = useMemo(() => {
+    const name = team?.name?.trim() || "";
+    if (!name) return [] as string[];
+    const base = new Set<string>([
+      name,
+      `${name} CF`,
+      `${name} FC`,
+      `${name} C.F.`,
+      `${name} F.C.`,
+      `${name} Club de Fútbol`,
+    ]);
+    return Array.from(base);
+  }, [team?.name]);
+
+  useEffect(() => {
+    const name = team?.name?.trim();
+    if (!name) return;
+    let cancelled = false;
+    async function loadNews() {
+      try {
+        setNewsLoading(true);
+        setNewsError(null);
+        const apiKey = NEWSAPI_KEY?.trim();
+        if (!apiKey) {
+          setNewsError("No hay API key configurada para noticias.");
+          setNews([]);
+          return;
+        }
+        const q = `(${teamAliases.map((a) => `"${a}"`).join(" OR ")}) AND (fútbol OR soccer OR LaLiga) NOT (baloncesto OR basket)`;
+        const domains = [
+          "marca.com",
+          "as.com",
+          "mundodeportivo.com",
+          "sport.es",
+          "besoccer.com",
+          "goal.com",
+          "eurosport.com",
+          "espn.com",
+          "bbc.com",
+        ].join(",");
+        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(
+          domains
+        )}&searchIn=title,description&apiKey=${apiKey}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
+        const data = await res.json();
+        if (cancelled) return;
+        const articles: any[] = Array.isArray(data.articles) ? data.articles : [];
+        const seen = new Set<string>();
+        const deduped = articles.filter((a) => {
+          const key = (a.url ?? `${a.title}-${a.publishedAt}`) as string;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        const filtered = deduped.filter((a) => {
+          const text = `${a.title ?? ""} ${a.description ?? ""}`.toLowerCase();
+          return teamAliases.some((alias) => text.includes(alias.toLowerCase()));
+        });
+        setNews(filtered);
+      } catch (err) {
+        console.error("load news failed", err);
+        setNewsError("No se pudieron cargar noticias.");
+        setNews([]);
+      } finally {
+        if (!cancelled) setNewsLoading(false);
+      }
+    }
+    loadNews();
+    return () => {
+      cancelled = true;
+    };
+  }, [team?.name, NEWSAPI_KEY, teamAliases]);
+
+  /* ---------- Render helpers (hooks still here) ---------- */
+  const playersById = useMemo(() => {
+    const map = new Map<string, Player>();
+    for (const p of players) if (p.id !== undefined && p.id !== null) map.set(String(p.id), p);
+    return map;
+  }, [players]);
+
+  const starters = players.filter((p) => p.isStarter);
+  const substitutes = players.filter((p) => !p.isStarter && p.positions && p.positions.length > 0);
+  const assignedIds = new Set(fieldSlots.map((s) => s.playerId).filter(Boolean));
+  const startersBench = starters.filter((p) => !assignedIds.has(p.id));
+  const substitutesBench = substitutes.filter((p) => !assignedIds.has(p.id));
+
+  /* ---------- Player helpers ---------- */
+  function normalizePlayer(p: Partial<Player> & Record<string, any>): Player {
+    return {
+      id: p.id ?? Math.random().toString(36).slice(2),
+      name: typeof p.name === "string" ? p.name : "",
+      number: typeof p.number === "number" ? p.number : typeof p.number === "string" && !Number.isNaN(Number(p.number)) ? Number(p.number) : 0,
+      positions: Array.isArray(p.positions) ? (p.positions as string[]) : typeof p.positions === "string" ? [p.positions as string] : [],
+      photo: typeof p.photo === "string" ? p.photo : null,
+      photoPreview: typeof p.photo === "string" ? p.photo : placeholderImg,
+      isStarter: Boolean(p.isStarter),
+    } as Player;
+  }
+
+  function openPlayer(p: Player | null) {
+    if (!p) {
+      setSelectedPlayer(null);
+      return;
+    }
+    setSelectedPlayer(normalizePlayer(p));
+  }
 
   /* ---------- Drag & drop helpers ---------- */
   function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
-    // Guardamos el fromSlotId para que el drop pueda distinguir bench vs field
     e.dataTransfer.setData("text/plain", `${playerId}|${fromSlotId}`);
     e.dataTransfer.effectAllowed = "move";
   }
-
   function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
-    // Defensa: si por alguna razón se intenta iniciar drag, comprobamos que el jugador sea titular
     const dragged = playersById.get(String(playerId));
     if (!dragged || !dragged.isStarter) {
       e.preventDefault();
       return;
     }
-
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
-    // fromSlotId vacío indica bench
     e.dataTransfer.setData("text/plain", `${playerId}|`);
     e.dataTransfer.effectAllowed = "move";
   }
-
   function onDragOverSlot(e: React.DragEvent) {
-    // No leer dataTransfer aquí: algunos navegadores devuelven vacío en dragover.
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     (e.currentTarget as HTMLElement).classList.add("drag-over");
@@ -250,9 +375,8 @@ export default function TeamDetailPage(): JSX.Element {
     if (preventAutoFillRef.current) return nextSlots;
     const hasStarters = currentPlayers.some((p) => p.isStarter);
     if (!hasStarters) return nextSlots;
-
-    const assignedIds = new Set(nextSlots.map((s) => s.playerId).filter(Boolean));
-    const bench = currentPlayers.filter((p) => !assignedIds.has(p.id));
+    const assignedIdsLocal = new Set(nextSlots.map((s) => s.playerId).filter(Boolean));
+    const bench = currentPlayers.filter((p) => !assignedIdsLocal.has(p.id));
     const next = nextSlots.map((s) => ({ ...s }));
     for (const slot of next) {
       if (slot.playerId) continue;
@@ -266,33 +390,24 @@ export default function TeamDetailPage(): JSX.Element {
     e.preventDefault();
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
-
-    // payload: "playerId|fromSlotId" where fromSlotId === "" means bench
     const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
     const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
-
-    // Validación temprana: si viene del bench y NO es titular, no hacemos NINGÚN cambio
     const draggedPlayer = playersById.get(String(pid));
     if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
-      // bloqueo total: no sustituir, no vaciar, no efectos colaterales
       return;
     }
-
     setFieldSlots((prev) => {
       const next = prev.map((s) => ({ ...s }));
       const target = next.find((s) => s.slotId === targetSlotId);
       if (!target) return prev;
-
       const fromSlot = next.find((s) => String(s.playerId) === String(pid));
-
       if (preventAutoFillRef.current || target.noAutoFill) {
         if (fromSlot) fromSlot.playerId = null;
         target.playerId = pid;
         if (id) saveLineupToStorage(id, next);
         return next;
       }
-
       if (fromSlot && fromSlot.slotId !== target.slotId) {
         const temp = target.playerId;
         target.playerId = fromSlot.playerId;
@@ -301,14 +416,12 @@ export default function TeamDetailPage(): JSX.Element {
         if (id) saveLineupToStorage(id, ensuredSwap);
         return ensuredSwap;
       }
-
       if (!fromSlot && target.playerId) {
         target.playerId = pid;
         const ensuredReplace = ensureFieldNotEmpty(next, players);
         if (id) saveLineupToStorage(id, ensuredReplace);
         return ensuredReplace;
       }
-
       target.playerId = pid;
       const ensured = ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, ensured);
@@ -323,17 +436,13 @@ export default function TeamDetailPage(): JSX.Element {
     const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
     const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
-
-    // Si el drag viene del bench y el jugador no es titular, no hacemos nada
     const draggedPlayer = playersById.get(String(pid));
     if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
       return;
     }
-
     setFieldSlots((prev) => {
       const next = prev.map((s) => ({ ...s }));
       for (const s of next) if (String(s.playerId) === String(pid)) s.playerId = null;
-
       const final = preventAutoFillRef.current ? next : ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, final);
       return final;
@@ -347,25 +456,19 @@ export default function TeamDetailPage(): JSX.Element {
     const [pidRaw, fromSlotIdRaw] = raw.split("|");
     const pid = isNaN(Number(pidRaw)) ? pidRaw : Number(pidRaw);
     if (String(pid) === String(benchPlayerId)) return;
-
-    // Validar que el jugador destino en el bench sea titular
     const benchPlayer = playersById.get(String(benchPlayerId));
     if (!benchPlayer || !benchPlayer.isStarter) {
       return;
     }
-
-    // Si el drag viene del bench y el arrastrado no es titular, bloquear
     const isBenchDrag = typeof fromSlotIdRaw === "string" && fromSlotIdRaw.trim() === "";
     const draggedPlayer = playersById.get(String(pid));
     if (isBenchDrag && draggedPlayer && !draggedPlayer.isStarter) {
       return;
     }
-
-    setFieldSlots(prev => {
-      const next = prev.map(s => ({ ...s }));
-      const fromSlot = next.find(s => String(s.playerId) === String(pid));
+    setFieldSlots((prev) => {
+      const next = prev.map((s) => ({ ...s }));
+      const fromSlot = next.find((s) => String(s.playerId) === String(pid));
       if (!fromSlot) return prev;
-
       fromSlot.playerId = benchPlayerId;
       if (id) saveLineupToStorage(id, next);
       return next;
@@ -415,306 +518,261 @@ export default function TeamDetailPage(): JSX.Element {
     }
   }
 
-  /* ---------- Noticias del equipo (opcional) ---------- */
-  const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898";
-
-  const teamAliases = useMemo(() => {
-    const name = team?.name?.trim() || "";
-    if (!name) return [] as string[];
-    const base = new Set<string>([
-      name,
-      `${name} CF`,
-      `${name} FC`,
-      `${name} C.F.`,
-      `${name} F.C.`,
-      `${name} Club de Fútbol`,
-    ]);
-    return Array.from(base);
-  }, [team?.name]);
-
-  function articleMatchesTeam(a: NewsArticle, aliases: string[]) {
-    const text = `${a.title ?? ""} ${a.description ?? ""}`.toLowerCase();
-    return aliases.some((alias) => {
-      const al = alias.toLowerCase();
-      return text.includes(al);
-    });
-  }
-
-  useEffect(() => {
-    const name = team?.name?.trim();
-    if (!name) return;
-
-    let cancelled = false;
-    async function loadNews() {
-      try {
-        setNewsLoading(true);
-        setNewsError(null);
-
-        const apiKey = NEWSAPI_KEY?.trim();
-        if (!apiKey) {
-          setNewsError("No hay API key configurada para noticias.");
-          setNews([]);
-          return;
-        }
-
-        const q = `(${teamAliases.map((a) => `"${a}"`).join(" OR ")}) AND (fútbol OR soccer OR LaLiga) NOT (baloncesto OR basket)`;
-        const domains = [
-          "marca.com",
-          "as.com",
-          "mundodeportivo.com",
-          "sport.es",
-          "besoccer.com",
-          "goal.com",
-          "eurosport.com",
-          "espn.com",
-          "bbc.com",
-        ].join(",");
-
-        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(domains)}&searchIn=title,description&apiKey=${apiKey}`;
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
-        const data = await res.json();
-        if (cancelled) return;
-
-        const articles: NewsArticle[] = Array.isArray(data.articles) ? data.articles : [];
-
-        const seen = new Set<string>();
-        const deduped = articles.filter((a) => {
-          const key = (a.url ?? `${a.title}-${a.publishedAt}`) as string;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-
-        const filtered = deduped.filter((a) => articleMatchesTeam(a, teamAliases));
-        setNews(filtered);
-      } catch (err) {
-        console.error("load news failed", err);
-        setNewsError("No se pudieron cargar noticias.");
-        setNews([]);
-      } finally {
-        if (!cancelled) setNewsLoading(false);
-      }
-    }
-
-    loadNews();
-    return () => { cancelled = true; };
-  }, [team?.name, NEWSAPI_KEY, teamAliases]);
-
-  /* ---------- Render helpers ---------- */
-  const playersById = useMemo(() => {
-    const map = new Map<string, Player>();
-    for (const p of players) if (p.id !== undefined && p.id !== null) map.set(String(p.id), p);
-    return map;
-  }, [players]);
-
-  const starters = players.filter((p) => p.isStarter);
-  const substitutes = players.filter((p) => !p.isStarter && p.positions && p.positions.length > 0);
-  const assignedIds = new Set(fieldSlots.map((s) => s.playerId).filter(Boolean));
-  const startersBench = starters.filter((p) => !assignedIds.has(p.id));
-  const substitutesBench = substitutes.filter((p) => !assignedIds.has(p.id));
-
-  if (loading) {
-    return (
-      <div>
-        <Menu />
-        <section className="page-wrapper">
-          <p>Loading...</p>
-        </section>
-      </div>
-    );
-  }
-
+  /* ---------- Derived values ---------- */
+  const playerCount = Array.isArray(players) ? players.length : 0;
   const crestCandidate = team ? team.logo ?? team.crest ?? team.photo : null;
   const crestUrl = typeof crestCandidate === "string" ? crestCandidate : null;
-  const placeholderImg =
-    "https://images.unsplash.com/photo-1521417532886-55d2f88f0a52?q=80&w=1200&auto=format&fit=crop";
 
+  /* ---------- Players tab helpers ---------- */
+  const playersForTeam = useMemo(() => {
+    if (!Array.isArray(players)) return [];
+    return players.filter((p) => {
+      if ((p as any).teamId !== undefined && (p as any).teamId !== null) {
+        return String((p as any).teamId) === String(team?.id);
+      }
+      return true;
+    });
+  }, [players, team?.id]);
+
+  const filteredPlayers = useMemo(() => {
+    if (!searchTerm) return playersForTeam;
+    const q = searchTerm.toLowerCase();
+    return playersForTeam.filter((p) => (p.name || "").toLowerCase().includes(q) || String(p.number || "").includes(q));
+  }, [playersForTeam, searchTerm]);
+
+  /* ---------- Render ---------- */
   return (
     <div>
       <Menu />
       <section className="page-wrapper team-page">
-        {playerCount < 11 ? <Warning /> : <Info />}
-        <header className="team-header">
-          <div className="team-header-left">
-            {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
-            <div className="team-title-block">
-              <h2>{team?.name ?? "Team"}</h2>
-
-              {team?.description && (
-                <div className="team-desc-wrapper">
-                  <p className={`team-desc-inline ${showFullDesc ? "expanded" : "collapsed"}`}>
-                    {team.description}
-                  </p>
-                  {typeof team.description === "string" && team.description.length > 240 && (
-                    <button
-                      type="button"
-                      className="desc-toggle"
-                      onClick={() => setShowFullDesc((s) => !s)}
-                      aria-expanded={showFullDesc}
-                    >
-                      {showFullDesc ? "Mostrar menos" : "Mostrar más"}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
-              {saving ? "Guardando..." : "Save lineup"}
-            </button>
-            <button className="btn btn-edit" onClick={() => { if (!id) return; navigate(`/teams/add/${id}`); }} title="Editar equipo">Edit team</button>
-            {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
+        {loading ? (
+          <div style={{ padding: 24 }}>
+            <p>Loading...</p>
           </div>
-          <div className="team-header-actions">
-            <button className="btn btn-back" onClick={() => navigate("/teams")}>Back</button>
-          </div>
-        </header>
+        ) : (
+          <>
+            {playerCount < 11 ? <Warning /> : <Info />}
 
-        <main className="team-main">
-          <div className="team-layout">
-            <div className="field-area" aria-label="Field">
-              <div className="football-field" role="img" aria-label="Football field" ref={fieldRef}>
-                <div className="half-line-horizontal" />
-                <div className="center-circle" />
-                <div className="penalty-top" />
-                <div className="penalty-bottom" />
-                <div className="goal-top" />
-                <div className="goal-bottom" />
-
-                {fieldSlots.map((slot) => {
-                  const player = playersById.get(String(slot.playerId ?? ""));
-                  return (
-                    <div
-                      key={slot.slotId}
-                      className="field-slot-absolute"
-                      style={{ left: slot.left ?? "50%", top: slot.top ?? "50%" }}
-                      onDragOver={onDragOverSlot}
-                      onDragLeave={(e) => (e.currentTarget as HTMLElement).classList.remove("drag-over")}
-                      onDrop={(e) => {
-                        (e.currentTarget as HTMLElement).classList.remove("drag-over");
-                        onDropToSlot(e, slot.slotId);
-                      }}
-                    >
-                      {player ? (
-                        <div
-                          className="player-chip vertical"
-                          draggable={Boolean(player.isStarter)}
-                          onDragStart={(e) => { if (!player.isStarter) return; onDragStartFromField(e, player.id!, slot.slotId); }}
-                          title={`${player.name} ${(player.positions || []).join(", ")}`}
-                        >
-                          <img src={(player as any).photoPreview ?? placeholderImg} alt={player.name} className="chip-photo large" />
-                          <div className="chip-info centered">
-                            <div className="chip-name">{player.name ?? "Unknown player"}</div>
-                            <div className="chip-number">#{player.number}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="slot-empty" aria-hidden>+</div>
+            <header className="team-header">
+              <div className="team-header-left">
+                {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
+                <div className="team-title-block">
+                  <h2>{team?.name ?? "Team"}</h2>
+                  {team?.description && (
+                    <div className="team-desc-wrapper">
+                      <p className={`team-desc-inline ${showFullDesc ? "expanded" : "collapsed"}`}> {team.description} </p>
+                      {typeof team.description === "string" && team.description.length > 240 && (
+                        <button type="button" className="desc-toggle" onClick={() => setShowFullDesc((s) => !s)} aria-expanded={showFullDesc}>
+                          {showFullDesc ? "Mostrar menos" : "Mostrar más"}
+                        </button>
                       )}
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+                <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
+                  {saving ? "Guardando..." : "Save lineup"}
+                </button>
+                <button
+                  className="btn btn-edit"
+                  onClick={() => {
+                    if (!id) return;
+                    navigate(`/teams/add/${id}`);
+                  }}
+                  title="Editar equipo"
+                >
+                  Edit team
+                </button>
+                {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
               </div>
 
-              <div className="field-actions" style={{ marginTop: 12 }}>
-                <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
-                <button className="btn btn-clear" onClick={clearField}>Clean soccer field</button>
+              <div className="team-header-actions">
+                <button className="btn btn-back" onClick={() => navigate("/teams")}>Back</button>
               </div>
-            </div>
+            </header>
 
-            <aside
-              className="bench-area"
-              aria-label="Bench and full squad"
-              ref={benchRef}
-              onDragOver={(e) => { e.preventDefault(); }}
-              onDrop={onDropToBench}
-              style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
-            >
-              <h3>Matchday Squad (Bench)</h3>
-              <div className="bench-list">
-                {startersBench.map((p) => (
-                  <div
-                    key={p.id}
-                    className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
-                    draggable={Boolean(p.isStarter)}
-                    onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = p.isStarter ? "move" : "none"; }}
-                    onDrop={(e) => { if (!p.isStarter) return; onDropOnBenchPlayer(e, p.id!); }}
-                    title={p.name}
-                  >
-                    <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
-                    <div className="bench-info small">
-                      <div className="bench-name">{p.name ?? "Unknown player"}</div>
-                      <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+            <main className="team-main">
+              {/* Tabs: Lineup / Players */}
+              <div className="tabs" style={{ marginTop: 8 }}>
+                <div className={`tab ${activeTab === "lineup" ? "tab--active" : ""}`} onClick={() => setActiveTab("lineup")}>Lineup</div>
+                <div className={`tab ${activeTab === "players" ? "tab--active" : ""}`} onClick={() => setActiveTab("players")}>Players</div>
+              </div>
+
+              {/* Conditional content */}
+              {activeTab === "lineup" ? (
+                <div className="team-layout">
+                  <div className="field-area" aria-label="Field">
+                    <div className="football-field" role="img" aria-label="Football field" ref={fieldRef}>
+                      <div className="half-line-horizontal" />
+                      <div className="center-circle" />
+                      <div className="penalty-top" />
+                      <div className="penalty-bottom" />
+                      <div className="goal-top" />
+                      <div className="goal-bottom" />
+                      {fieldSlots.map((slot) => {
+                        const player = playersById.get(String(slot.playerId ?? ""));
+                        return (
+                          <div
+                            key={slot.slotId}
+                            className="field-slot-absolute"
+                            style={{ left: slot.left ?? "50%", top: slot.top ?? "50%" }}
+                            onDragOver={onDragOverSlot}
+                            onDragLeave={(e) => (e.currentTarget as HTMLElement).classList.remove("drag-over")}
+                            onDrop={(e) => {
+                              (e.currentTarget as HTMLElement).classList.remove("drag-over");
+                              onDropToSlot(e, slot.slotId);
+                            }}
+                          >
+                            {player ? (
+                              <div
+                                className="player-chip vertical"
+                                draggable={Boolean(player.isStarter)}
+                                onDragStart={(e) => {
+                                  if (!player.isStarter) return;
+                                  onDragStartFromField(e, player.id!, slot.slotId);
+                                }}
+                                title={`${player.name} ${(player.positions || []).join(", ")}`}
+                                onDoubleClick={() => openPlayer(player)}
+                                onClick={() => openPlayer(player)}
+                              >
+                                <img src={(player as any).photoPreview ?? placeholderImg} alt={player.name} className="chip-photo large" />
+                                <div className="chip-info centered">
+                                  <div className="chip-name">{player.name ?? "Unknown player"}</div>
+                                  <div className="chip-number">#{player.number}</div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="slot-empty" aria-hidden>+</div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <div className="bench-meta"><span className="badge starter">In the matchday squad</span></div>
-                  </div>
-                ))}
-              </div>
 
-              <h3 style={{ marginTop: 12 }}>Not in the Matchday Squad</h3>
-              <div className="bench-list">
-                {substitutesBench.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bench-player bench-not-allowed"
-                    draggable={false}
-                    onDragStart={(e) => { e.preventDefault(); }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
-                    title={p.name}
-                  >
-                    <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
-                    <div className="bench-info small">
-                      <div className="bench-name">{p.name ?? "Unknown player"}</div>
-                      <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                    <div className="field-actions" style={{ marginTop: 12 }}>
+                      <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
+                      <button className="btn btn-clear" onClick={clearField}>Clean soccer field</button>
                     </div>
-                    <div className="bench-meta"><span className="badge">Not in the Matchday Squad</span></div>
                   </div>
-                ))}
-              </div>
-            </aside>
-          </div>
 
-          <section className="team-news">
-            <h3>Latest news about {team?.name}</h3>
-
-            {newsLoading && <p>Loading news...</p>}
-            {newsError && <p className="news-error">{newsError}</p>}
-
-            {!newsLoading && !newsError && news && news.length === 0 && (
-              <p>No recent news found for “{team?.name}”.</p>
-            )}
-
-            {!newsLoading && !newsError && news && news.length > 0 && (
-              <div className="news-list">
-                {news.map((article) => (
-                  <a
-                    key={article.url}
-                    href={article.url ?? ""}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="news-article"
-                    aria-label={article.title ?? `News about ${team?.name}`}
-                    onClick={(e) => e.stopPropagation()}
+                  <aside
+                    className="bench-area"
+                    aria-label="Bench and full squad"
+                    ref={benchRef}
+                    onDragOver={(e) => { e.preventDefault(); }}
+                    onDrop={onDropToBench}
+                    style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
                   >
-                    {article.urlToImage && (
-                      <img
-                        src={article.urlToImage}
-                        alt={article.title ?? team?.name ?? "News"}
-                        loading="lazy"
-                      />
+                    <h3>Matchday Squad (Bench)</h3>
+                    <div className="bench-list">
+                      {startersBench.map((p) => (
+                        <div
+                          key={p.id}
+                          className={`bench-player${p.isStarter ? "" : " bench-not-allowed"}`}
+                          draggable={Boolean(p.isStarter)}
+                          onDragStart={(e) => { if (!p.isStarter) return; onDragStartFromBench(e, p.id!); }}
+                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = p.isStarter ? "move" : "none"; }}
+                          onDrop={(e) => { if (!p.isStarter) return; onDropOnBenchPlayer(e, p.id!); }}
+                          title={p.name}
+                          onClick={() => openPlayer(p)}
+                        >
+                          <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
+                          <div className="bench-info small">
+                            <div className="bench-name">{p.name ?? "Unknown player"}</div>
+                            <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                          </div>
+                          <div className="bench-meta"><span className="badge starter">In the matchday squad</span></div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <h3 style={{ marginTop: 12 }}>Not in the Matchday Squad</h3>
+                    <div className="bench-list">
+                      {substitutesBench.map((p) => (
+                        <div
+                          key={p.id}
+                          className="bench-player bench-not-allowed"
+                          draggable={false}
+                          onDragStart={(e) => { e.preventDefault(); }}
+                          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
+                          title={p.name}
+                          onClick={() => openPlayer(p)}
+                        >
+                          <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
+                          <div className="bench-info small">
+                            <div className="bench-name">{p.name ?? "Unknown player"}</div>
+                            <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                          </div>
+                          <div className="bench-meta"><span className="badge">Not in the Matchday Squad</span></div>
+                        </div>
+                      ))}
+                    </div>
+                  </aside>
+                </div>
+              ) : (
+                /* Players tab content */
+                <div className="players-tab" style={{ marginTop: 12 }}>
+                  <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      type="search"
+                      placeholder="Search players..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="teams-search-input"
+                      style={{ width: "100%", maxWidth: 420, padding: "8px 12px", borderRadius: 8 }}
+                    />
+                    <div style={{ color: "#c0c7d0", fontSize: 14 }}>{filteredPlayers.length} players</div>
+                  </div>
+
+                  <div className="players-grid">
+                    {filteredPlayers.length === 0 ? (
+                      <div style={{ marginTop: 12, color: "#c0c7d0" }}>No players found.</div>
+                    ) : (
+                      filteredPlayers.map((p) => (
+                        <PlayerCard
+                          key={p.id}
+                          player={p}
+                          onClick={(pl: any) => {
+                            openPlayer(normalizePlayer(pl));
+                          }}
+                        />
+                      ))
                     )}
-                    {article.title && <h4 className="news-heading">{article.title}</h4>}
-                    {article.description && <p>{article.description}</p>}
-                  </a>
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
+                  </div>
+                </div>
+              )}
+
+              <section className="team-news">
+                <h3>Latest news about {team?.name}</h3>
+                {newsLoading && <p>Loading news...</p>}
+                {newsError && <p className="news-error">{newsError}</p>}
+                {!newsLoading && !newsError && news && news.length === 0 && <p>No recent news found for “{team?.name}”.</p>}
+                {!newsLoading && !newsError && news && news.length > 0 && (
+                  <div className="news-list">
+                    {news.map((article) => (
+                      <a
+                        key={article.url}
+                        href={article.url ?? ""}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="news-article"
+                        aria-label={article.title ?? `News about ${team?.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {article.urlToImage && <img src={article.urlToImage} alt={article.title ?? team?.name ?? "News"} loading="lazy" />}
+                        {article.title && <h4 className="news-heading">{article.title}</h4>}
+                        {article.description && <p>{article.description}</p>}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </main>
+          </>
+        )}
       </section>
+
+      {/* Player modal */}
+      {selectedPlayer && <PlayerModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
     </div>
   );
 }
