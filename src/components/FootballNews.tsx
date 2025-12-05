@@ -18,7 +18,7 @@ export default function FootballNews() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898"; // tu API key
+  const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898"; 
 
   useEffect(() => {
     let cancelled = false;
@@ -28,12 +28,12 @@ export default function FootballNews() {
         setError(null);
 
         if (!NEWSAPI_KEY) {
-          setError("No hay API key configurada para noticias.");
+          setError("No API key is configured for news.");
           setArticles([]);
           return;
         }
 
-        const url = `https://newsapi.org/v2/everything?q=fútbol&language=es&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
+        const url = `https://newsapi.org/v2/everything?q=fútbol&language=en&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
         const data = await res.json();
@@ -58,9 +58,9 @@ export default function FootballNews() {
 
   return (
     <section className="football-news">
-      <h3>Últimas noticias de fútbol</h3>
+      <h3>Latest soccer news</h3>
 
-      {loading && <p>Cargando noticias...</p>}
+      {loading && <p>Loading news...</p>}
       {error && <p className="news-error">{error}</p>}
       {!loading && !error && articles.length === 0 && (
         <p>No se han encontrado noticias recientes.</p>

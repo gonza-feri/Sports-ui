@@ -32,7 +32,7 @@ export default function TeamsPage() {
         if (!cancelled) setTeams(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("Error loading teams", err);
-        setError("No se pudieron cargar los equipos.");
+        setError("The teams could not be loaded.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,7 +71,7 @@ export default function TeamsPage() {
   }, []);
 
   async function handleDelete(teamId: number) {
-    const confirmDelete = window.confirm("¿Seguro que quieres eliminar este equipo?");
+    const confirmDelete = window.confirm("Are you sure you want to delete this team?");
     if (!confirmDelete) return;
     try {
       await api.delete(`/teams/${teamId}`);
@@ -79,7 +79,7 @@ export default function TeamsPage() {
       setOpenMenu((prev) => (prev === teamId ? null : prev));
     } catch (err) {
       console.error("Error deleting team", err);
-      alert("No se pudo eliminar el equipo.");
+      alert("The team could not be removed.");
     }
   }
 
@@ -91,13 +91,13 @@ export default function TeamsPage() {
     <div>
       <Menu />
       <section className="page-wrapper" ref={wrapperRef}>
-        <h2>Equipos</h2>
+        <h2>Teams</h2>
 
         {/* Buscador */}
         <div className="team-search">
           <input
             type="text"
-            placeholder="Buscar equipo..."
+            placeholder="Search for team..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -143,7 +143,7 @@ export default function TeamsPage() {
                     e.stopPropagation();
                     setOpenMenu(openMenu === team.id ? null : team.id);
                   }}
-                  title="Abrir menú"
+                  title="Open menu"
                 >
                   ⋮
                 </button>
@@ -158,7 +158,7 @@ export default function TeamsPage() {
                         navigate(`/teams/${team.id}`);
                       }}
                     >
-                      Entrar
+                      Enter
                     </li>
                     <li
                       role="menuitem"
@@ -168,7 +168,7 @@ export default function TeamsPage() {
                         navigate(`/teams/add/${team.id}`);
                       }}
                     >
-                      Editar
+                      Edit
                     </li>
                     <li
                       role="menuitem"
@@ -178,7 +178,7 @@ export default function TeamsPage() {
                         handleDelete(team.id);
                       }}
                     >
-                      Eliminar
+                      Remove
                     </li>
                   </ul>
                 )}
@@ -188,7 +188,7 @@ export default function TeamsPage() {
         </ul>
       </section>
 
-      <FloatingButton aria-label="Añadir equipo" onClick={() => navigate("/teams/add")} />
+      <FloatingButton aria-label="Add team" onClick={() => navigate("/teams/add")} />
     </div>
   );
 }

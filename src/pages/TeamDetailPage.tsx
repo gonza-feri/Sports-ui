@@ -466,7 +466,7 @@ export default function TeamDetailPage(): JSX.Element {
           "bbc.com",
         ].join(",");
 
-        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=es&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(domains)}&searchIn=title,description&apiKey=${apiKey}`;
+        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(domains)}&searchIn=title,description&apiKey=${apiKey}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
@@ -507,18 +507,16 @@ export default function TeamDetailPage(): JSX.Element {
 
   const starters = players.filter((p) => p.isStarter);
   const substitutes = players.filter((p) => !p.isStarter && p.positions && p.positions.length > 0);
-  const nonStarters = players.filter((p) => !p.isStarter && (!p.positions || p.positions.length === 0));
   const assignedIds = new Set(fieldSlots.map((s) => s.playerId).filter(Boolean));
   const startersBench = starters.filter((p) => !assignedIds.has(p.id));
   const substitutesBench = substitutes.filter((p) => !assignedIds.has(p.id));
-  const nonStartersBench = nonStarters.filter((p) => !assignedIds.has(p.id));
 
   if (loading) {
     return (
       <div>
         <Menu />
         <section className="page-wrapper">
-          <p>Cargando...</p>
+          <p>Loading...</p>
         </section>
       </div>
     );
@@ -617,7 +615,7 @@ export default function TeamDetailPage(): JSX.Element {
 
               <div className="field-actions" style={{ marginTop: 12 }}>
                 <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
-                <button className="btn btn-clear" onClick={clearField}>Limpiar campo</button>
+                <button className="btn btn-clear" onClick={clearField}>Clean soccer field</button>
               </div>
             </div>
 
@@ -629,7 +627,7 @@ export default function TeamDetailPage(): JSX.Element {
               onDrop={onDropToBench}
               style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
             >
-              <h3>Titulares</h3>
+              <h3>Matchday Squad (Bench)</h3>
               <div className="bench-list">
                 {startersBench.map((p) => (
                   <div
@@ -646,12 +644,12 @@ export default function TeamDetailPage(): JSX.Element {
                       <div className="bench-name">{p.name ?? "Unknown player"}</div>
                       <div className="bench-pos">{(p.positions || []).join(", ")}</div>
                     </div>
-                    <div className="bench-meta"><span className="badge starter">Titular</span></div>
+                    <div className="bench-meta"><span className="badge starter">In the matchday squad</span></div>
                   </div>
                 ))}
               </div>
 
-              <h3 style={{ marginTop: 12 }}>Suplentes</h3>
+              <h3 style={{ marginTop: 12 }}>Not in the Matchday Squad</h3>
               <div className="bench-list">
                 {substitutesBench.map((p) => (
                   <div
@@ -667,28 +665,7 @@ export default function TeamDetailPage(): JSX.Element {
                       <div className="bench-name">{p.name ?? "Unknown player"}</div>
                       <div className="bench-pos">{(p.positions || []).join(", ")}</div>
                     </div>
-                    <div className="bench-meta"><span className="badge">Suplente</span></div>
-                  </div>
-                ))}
-              </div>
-
-              <h3 style={{ marginTop: 12 }}>No titulares</h3>
-              <div className="bench-list">
-                {nonStartersBench.map((p) => (
-                  <div
-                    key={p.id}
-                    className="bench-player bench-not-allowed"
-                    draggable={false}
-                    onDragStart={(e) => { e.preventDefault(); }}
-                    onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "none"; }}
-                    title={p.name}
-                  >
-                    <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
-                    <div className="bench-info small">
-                      <div className="bench-name">{p.name ?? "Unknown player"}</div>
-                      <div className="bench-pos">{(p.positions || []).join(", ")}</div>
-                    </div>
-                    <div className="bench-meta"><span className="badge">No titular</span></div>
+                    <div className="bench-meta"><span className="badge">Not in the Matchday Squad</span></div>
                   </div>
                 ))}
               </div>
@@ -696,20 +673,37 @@ export default function TeamDetailPage(): JSX.Element {
           </div>
 
           <section className="team-news">
-            <h3>Últimas noticias sobre {team?.name}</h3>
+            <h3>Latest news about {team?.name}</h3>
 
-            {newsLoading && <p>Cargando noticias...</p>}
+            {newsLoading && <p>Loading news...</p>}
             {newsError && <p className="news-error">{newsError}</p>}
+
             {!newsLoading && !newsError && news && news.length === 0 && (
-              <p>No se han encontrado noticias recientes para "{team?.name}".</p>
+              <p>No recent news found for “{team?.name}”.</p>
             )}
+
             {!newsLoading && !newsError && news && news.length > 0 && (
               <div className="news-list">
                 {news.map((article) => (
-                  <div key={article.url} className="news-article">
-                    <img src={article.urlToImage ?? ""} alt={article.title ?? ""} />
-                    <p>{article.description}</p>
-                  </div>
+                  <a
+                    key={article.url}
+                    href={article.url ?? ""}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="news-article"
+                    aria-label={article.title ?? `News about ${team?.name}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {article.urlToImage && (
+                      <img
+                        src={article.urlToImage}
+                        alt={article.title ?? team?.name ?? "News"}
+                        loading="lazy"
+                      />
+                    )}
+                    {article.title && <h4 className="news-heading">{article.title}</h4>}
+                    {article.description && <p>{article.description}</p>}
+                  </a>
                 ))}
               </div>
             )}

@@ -666,7 +666,7 @@ export default function AddTeamPage(): JSX.Element {
                   </div>
                   <div>
                     <span className="player-summary-starter">
-                      {p.isStarter ? "Titular" : ""}
+                      {p.isStarter ? "In the matchday squad" : ""}
                     </span>
                   </div>
                 </div>
@@ -774,7 +774,7 @@ export default function AddTeamPage(): JSX.Element {
                             updatePlayerField(i, "isStarter", e.target.checked)
                           }
                         />
-                        Titular
+                        In the matchday squad
                       </label>
                     </div>
 
