@@ -5,6 +5,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import type { Team, Player } from "../types/types";
 import Menu from "../components/Menu";
+import Info from "../components/Info";
+import Warning from "../components/Warning";
 import "./TeamDetailPage.css";
 
 /* ---------- Tipos locales ---------- */
@@ -96,6 +98,8 @@ export default function TeamDetailPage(): JSX.Element {
 
   const [fieldSlots, setFieldSlots] = useState<LineupSlot[]>([]);
   const [, setInitialLineup] = useState<LineupSlot[] | null>(null);
+  // If "players" are already for the current team:
+  const playerCount = Array.isArray(players) ? players.length : 0;
 
   type NewsArticle = {
     source?: { id?: string | null; name?: string | null };
@@ -531,6 +535,7 @@ export default function TeamDetailPage(): JSX.Element {
     <div>
       <Menu />
       <section className="page-wrapper team-page">
+        {playerCount < 11 ? <Warning /> : <Info />}
         <header className="team-header">
           <div className="team-header-left">
             {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
