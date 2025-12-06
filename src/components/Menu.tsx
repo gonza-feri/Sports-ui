@@ -9,7 +9,6 @@ export default function Menu() {
   const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
-
   const isTeamsAdd = location.pathname.startsWith("/teams/add");
 
   // estado para mostrar/ocultar el header
@@ -45,11 +44,7 @@ export default function Menu() {
     <header className={`app-header ${showHeader ? "visible" : "hidden"}`}>
       {/* Logo + título como enlace */}
       <div className="logo-area">
-        <a
-          href="/"
-          onClick={(e) => handleNavClick(e, "/")}
-          className="logo-link"
-        >
+        <a href="/" onClick={(e) => handleNavClick(e, "/")} className="logo-link">
           <img src={logo} alt="Dream League logo" className="logo-img" />
           <h1>Dream League</h1>
         </a>
@@ -58,10 +53,7 @@ export default function Menu() {
       {/* Navegación */}
       <nav className="nav-text">
         {/* Selector de idioma (a la izquierda de Home) */}
-        <div
-          className="nav-item"
-          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-        >
+        <div className="nav-item" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
           <LanguageSwitcher />
         </div>
 
@@ -69,11 +61,7 @@ export default function Menu() {
           href="/"
           onClick={(e) => handleNavClick(e, "/")}
           className={
-            isTeamsAdd
-              ? "nav-item inactive"
-              : location.pathname === "/"
-              ? "nav-item active"
-              : "nav-item inactive"
+            isTeamsAdd ? "nav-item inactive" : location.pathname === "/" ? "nav-item active" : "nav-item inactive"
           }
         >
           {t("home")}
