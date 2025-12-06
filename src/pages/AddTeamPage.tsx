@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/AddTeamPage.tsx
-import React, { JSX, useEffect, useRef, useState } from "react";
+import React, { JSX, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../services/api";
 import type { Team, Player, PlayerForm } from "../types/types";
@@ -8,119 +8,217 @@ import Menu from "../components/Menu";
 import "./AddTeamPage.css";
 import { useI18n } from "../i18n/I18nProvider";
 
+/* ---------------- Helpers ---------------- */
+function normalizeLower(raw?: string | null): string {
+  if (!raw) return "";
+  return String(raw).trim().toLowerCase();
+}
 
+/**
+ * DISPLAY_TO_ACRONYM: mapea variantes de texto guardadas (lowercased)
+ * a la abreviatura que queremos almacenar/usar en la UI (ej "gk","rb").
+ * Añade aquí variantes localizadas o legacy que puedas tener.
+ */
+const DISPLAY_TO_ACRONYM: Record<string, string> = {
+  // goalkeeper
+  "vratar (v)": "gk",
+  "vratar": "gk",
+  "goalkeeper (gk)": "gk",
+  "goalkeeper": "gk",
+  "portero (pt)": "gk",
+  "portero": "gk",
+  "gk": "gk",
 
-export default function AddTeamPage(): JSX.Element {
-  const { t } = useI18n();
+  // right back
+  "right back (rb)": "rb",
+  "right_back": "rb",
+  "right-back": "rb",
+  "right back": "rb",
+  "lateral derecho (ld)": "rb",
+  "rb": "rb",
+  "ld": "rb",
 
-  
+  // left back
+  "left back (lb)": "lb",
+  "left_back": "lb",
+  "left-back": "lb",
+  "left back": "lb",
+  "lateral izquierdo (li)": "lb",
+  "lb": "lb",
+  "li": "lb",
 
-  const POS_OPTIONS = [
-  { v: t("gk"), t: t("goalkeeper") },
-  { v: t("rb"), t: t("right_back") },
-  { v: t("lb"), t: t("left_back") },
-  { v: t("fb"), t: t("full_back") },
-  { v: t("cb"), t: t("centre-back") },
-  { v: t("dm"), t: t("defensive_midfielder") },
-  { v: t("cm"), t: t("central_midfielder") },
-  { v: t("am"), t: t("attacking_midfielder") },
-  { v: t("rw"), t: t("right_winger") },
-  { v: t("lw"), t: t("left_winger") },
-  { v: t("w"), t: t("winger") },
-  { v: t("cf"), t: t("centre_forward") },
-  { v: t("st"), t: t("striker") },
+  // full back
+  "full back (fb)": "fb",
+  "full_back": "fb",
+  "full-back": "fb",
+  "fb": "fb",
+
+  // centre-back (note JSON uses "centre-back")
+  "centre-back": "cb",
+  "centre back": "cb",
+  "centre_back": "cb",
+  "cb": "cb",
+  "defensa central (dfc)": "cb",
+
+  // defensive midfielder
+  "defensive midfielder (dm)": "dm",
+  "defensive_midfielder": "dm",
+  "dm": "dm",
+  "medio centro defensivo (mcd)": "dm",
+
+  // central midfielder
+  "central midfielder (cm)": "cm",
+  "central_midfielder": "cm",
+  "cm": "cm",
+  "medio centro (mc)": "cm",
+
+  // attacking midfielder
+  "attacking midfielder (am)": "am",
+  "attacking_midfielder": "am",
+  "am": "am",
+  "mediocentro ofensivo (mco)": "am",
+
+  // right winger
+  "right winger (rw)": "rw",
+  "right_winger": "rw",
+  "rw": "rw",
+
+  // left winger
+  "left winger (lw)": "lw",
+  "left_winger": "lw",
+  "lw": "lw",
+
+  // winger
+  "winger (w)": "w",
+  "winger": "w",
+  "w": "w",
+
+  // centre forward
+  "centre_forward": "cf",
+  "centre forward": "cf",
+  "centre-forward": "cf",
+  "cf": "cf",
+
+  // striker
+  "striker (st)": "st",
+  "striker": "st",
+  "st": "st",
+};
+
+/* ---------------- POS_OPTIONS ----------------
+   - value: la abreviatura que guardamos en p.positions (ej "gk", "rb")
+   - labelKey: la clave de traducción que muestra el texto completo (ej "goalkeeper")
+   Asegúrate de que tus JSON tengan esas claves en root (ej "goalkeeper": "Goalkeeper (GK)").
+*/
+const POS_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "gk", labelKey: "goalkeeper" },
+  { value: "rb", labelKey: "right_back" },
+  { value: "lb", labelKey: "left_back" },
+  { value: "fb", labelKey: "full_back" },
+  { value: "cb", labelKey: "centre-back" }, // tu JSON usa centre-back
+  { value: "dm", labelKey: "defensive_midfielder" },
+  { value: "cm", labelKey: "central_midfielder" },
+  { value: "am", labelKey: "attacking_midfielder" },
+  { value: "rw", labelKey: "right_winger" },
+  { value: "lw", labelKey: "left_winger" },
+  { value: "w", labelKey: "winger" },
+  { value: "cf", labelKey: "centre_forward" },
+  { value: "st", labelKey: "striker" },
 ];
 
+/* ---------------- PlayerPositions component ----------------
+   Muestra las abreviaturas traducidas (ej "GK", "RB") a partir de p.positions,
+   que ahora contienen solo las abreviaturas.
+*/
+function PlayerPositions({ positions, className }: { positions?: string[] | null; className?: string }) {
+  const { t, lang } = useI18n();
+
+  const translated = useMemo(() => {
+    if (!positions || positions.length === 0) return "—";
+
+    return positions
+      .map((acr) => {
+        if (!acr) return "";
+        const key = normalizeLower(acr); // acr expected like "gk","rb"
+        // 1) Intentamos t("gk") -> en tus JSON "gk": "GK"
+        const rootTry = t(key);
+        if (rootTry && rootTry !== key) return rootTry;
+
+        // 2) fallback: si no existe, intentar mapear a labelKey (ej "goalkeeper") y mostrar su texto completo
+        //    (esto es raro si guardamos acrónimos, pero lo dejamos por seguridad)
+        const mapToLabelKey: Record<string, string> = {
+          gk: "goalkeeper",
+          rb: "right_back",
+          lb: "left_back",
+          fb: "full_back",
+          cb: "centre-back",
+          dm: "defensive_midfielder",
+          cm: "central_midfielder",
+          am: "attacking_midfielder",
+          rw: "right_winger",
+          lw: "left_winger",
+          w: "winger",
+          cf: "centre_forward",
+          st: "striker",
+        };
+        const labelKey = mapToLabelKey[key];
+        if (labelKey) {
+          const label = t(labelKey);
+          if (label && label !== labelKey) {
+            // si label es "Goalkeeper (GK)" devolvemos solo la parte acrónima si quieres,
+            // pero aquí devolvemos la abreviatura preferida (t(key)) si existe, o la etiqueta completa.
+            // Para mantener la vista contraída con solo acrónimos, intentamos extraer la abreviatura:
+            const acrMatch = String(label).match(/\(([A-Za-z0-9]{1,4})\)/);
+            if (acrMatch) return acrMatch[1];
+            return label;
+          }
+        }
+
+        // 3) fallback final: devolver la abreviatura tal cual
+        return acr;
+      })
+      .filter(Boolean)
+      .join(", ");
+  }, [positions, t, lang]);
+
+  return <span className={className}>{translated}</span>;
+}
+
+/* ----------------- AddTeamPage component ----------------- */
+export default function AddTeamPage(): JSX.Element {
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [teamName, setTeamName] = useState<string>("");
   const [teamDescription, setTeamDescription] = useState<string>("");
   const [teamLogoPreview, setTeamLogoPreview] = useState<string | null>(null);
-
   const [players, setPlayers] = useState<PlayerForm[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
-
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    // Selector del banner superior que aparece/desaparece
     const bannerSelector = ".top-banner";
     const updateOffset = () => {
       const banner = document.querySelector(bannerSelector) as HTMLElement | null;
-      const height =
-        banner && getComputedStyle(banner).display !== "none" ? banner.offsetHeight : 0;
+      const height = banner && getComputedStyle(banner).display !== "none" ? banner.offsetHeight : 0;
       document.documentElement.style.setProperty("--top-offset", `${height}px`);
     };
-
     updateOffset();
     window.addEventListener("resize", updateOffset);
-
     const bannerEl = document.querySelector(bannerSelector);
     let mo: MutationObserver | null = null;
     if (bannerEl) {
       mo = new MutationObserver(updateOffset);
       mo.observe(bannerEl, { attributes: true, attributeFilter: ["style", "class"] });
     }
-
     return () => {
       window.removeEventListener("resize", updateOffset);
       if (mo) mo.disconnect();
     };
   }, []);
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        if (id) {
-          const res = await api.get(`/teams/${id}`);
-          const t: Team = res.data;
-
-          setTeamName(t.name ?? "");
-          setTeamDescription(t.description ?? "");
-          setTeamLogoPreview(t.logo ?? null);
-
-          // Si el equipo no trae players embebidos (habitual en json-server), los cargamos por teamId
-          let rawPlayers: Player[] = Array.isArray((t as any).players) ? (t as any).players : [];
-          if (!rawPlayers.length) {
-            try {
-              const playersRes = await api.get("/players", { params: { teamId: id } });
-              rawPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
-            } catch (err) {
-              console.warn("No se pudieron cargar jugadores por teamId:", err);
-            }
-          }
-
-          const mapped: PlayerForm[] = rawPlayers.map((p: Player) => ({
-            id: p.id,
-            name: p.name ?? "",
-            number: p.number ?? 0,
-            positions: Array.isArray(p.positions) ? p.positions : [],
-            photo: null,
-            photoPreview: p.photo ?? null,
-            isStarter: !!p.isStarter,
-            positionSlot: (p as any).positionSlot ?? null,
-          }));
-          setPlayers(mapped);
-        } else {
-          setTeamName("");
-          setTeamDescription("");
-          setTeamLogoPreview(null);
-          setPlayers([]);
-        }
-      } catch (e) {
-        console.error("load team failed", e);
-        setError("No se pudo cargar el equipo.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id]);
 
   /* ---------- Helpers: file/image ---------- */
   async function fileToDataUrl(file: File): Promise<string> {
@@ -131,51 +229,31 @@ export default function AddTeamPage(): JSX.Element {
       reader.readAsDataURL(file);
     });
   }
+
   function svgToBase64DataUrl(svg: string) {
     const encoded = btoa(unescape(encodeURIComponent(svg)));
     return `data:image/svg+xml;base64,${encoded}`;
   }
+
   function makeInitials(name: string) {
     if (!name) return "P";
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
   }
-  function generatePlayerSvgDataUrl(
-    name: string,
-    colorBg = "#0b1220",
-    colorFg = "#ffffff",
-    size = 128
-  ) {
+
+  function generatePlayerSvgDataUrl(name: string, colorBg = "#0b1220", colorFg = "#ffffff", size = 128) {
     const initials = makeInitials(name);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  <rect width="100%" height="100%" fill="${colorBg}" rx="${Math.round(size * 0.08)}" />
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${Math.round(
-    size * 0.45
-  )}" fill="${colorFg}" font-weight="700">${initials}</text>
-</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"> <rect width="100%" height="100%" fill="${colorBg}" rx="${Math.round(size * 0.08)}" /> <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${Math.round(size * 0.45)}" fill="${colorFg}" font-weight="700">${initials}</text> </svg>`;
     return svgToBase64DataUrl(svg);
   }
+
   function normalizeDataUrl(raw?: string | null): string | null {
     if (!raw) return null;
     let s = String(raw).trim();
-    if (
-      (s.startsWith("'") && s.endsWith("'")) ||
-      (s.startsWith('"') && s.endsWith('"'))
-    ) {
-      s = s.slice(1, -1);
-    }
     while (s.endsWith(";")) s = s.slice(0, -1);
-    s = s.replace(/\s+/g, "");
-
-    if (/^data:image\/[a-z0-9.+-]+;(base64,|utf8,|,)/i.test(s) || /^data:image\/svg\+xml;base64,/.test(s))
-      return s;
-
-    const m = s.match(/^(data:image\/[a-z0-9.+-]+;base64)(.+)$/i);
-    if (m) return `${m[1]},${m[2]}`;
-
+    if (/^data:image\/[a-z0-9.+-]+;(base64,|utf8,|,)/i.test(s) || /^data:image\/svg\+xml;base64,/.test(s)) return s;
     if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) return `data:image/png;base64,${s}`;
-
     if (s.includes("<svg")) {
       try {
         const encoded = btoa(unescape(encodeURIComponent(s)));
@@ -184,15 +262,13 @@ export default function AddTeamPage(): JSX.Element {
         return null;
       }
     }
-
     if (/^https?:\/\//i.test(s)) return s;
     return null;
   }
+
   function sanitizePhoto(raw: string): string | null {
     if (!raw) return null;
-    let s = raw.trim();
-    if ((s.startsWith("'") && s.endsWith("'")) || (s.startsWith('"') && s.endsWith('"'))) s = s.slice(1, -1);
-    while (s.endsWith(";")) s = s.slice(0, -1);
+    const s = raw.trim();
     if (s.includes("<svg")) return svgToBase64DataUrl(s);
     if (/^data:image\/[a-z0-9.+-]+;/.test(s) || /^data:image\/svg\+xml,/.test(s)) return s;
     if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) return `data:image/png;base64,${s}`;
@@ -228,16 +304,13 @@ export default function AddTeamPage(): JSX.Element {
       cols.push(cur);
       rows.push(cols);
     }
-
     if (rows.length === 0) return [];
     const header = rows.shift()!.map((h) => h.trim().toLowerCase());
     const idxNombre = header.indexOf("nombre");
-    const idxNumero =
-      header.indexOf("número") >= 0 ? header.indexOf("número") : header.indexOf("numero");
+    const idxNumero = header.indexOf("número") >= 0 ? header.indexOf("número") : header.indexOf("numero");
     const idxPosiciones = header.indexOf("posiciones");
     const idxTitular = header.indexOf("titular");
     const idxFoto = header.indexOf("foto");
-
     return rows
       .map((cols) => {
         const get = (idx: number) => (idx >= 0 && idx < cols.length ? cols[idx].trim() : "");
@@ -267,10 +340,12 @@ export default function AddTeamPage(): JSX.Element {
     setPlayers((prev) => [newPlayer, ...prev]);
     setExpandedIndex(0);
   };
+
   const removePlayer = (idx: number) => {
     setPlayers((prev) => prev.filter((_, i) => i !== idx));
     setExpandedIndex(null);
   };
+
   const updatePlayerField = <K extends keyof PlayerForm>(idx: number, key: K, value: PlayerForm[K]) => {
     setPlayers((prev) => {
       const next = prev.slice();
@@ -278,6 +353,7 @@ export default function AddTeamPage(): JSX.Element {
       return next;
     });
   };
+
   const handlePlayerPhotoChange = async (idx: number, file: File | null) => {
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
@@ -307,11 +383,9 @@ export default function AddTeamPage(): JSX.Element {
       const text = await file.text();
       const rows = parseCSV(text);
       if (!rows.length) return;
-
       const imported: PlayerForm[] = [];
       for (const row of rows) {
         let photoPreview = sanitizePhoto(row.foto);
-
         if (photoPreview && /^https?:\/\//.test(photoPreview)) {
           try {
             const res = await fetch(photoPreview, { mode: "cors" });
@@ -330,12 +404,9 @@ export default function AddTeamPage(): JSX.Element {
             photoPreview = null;
           }
         }
-
         if (!photoPreview) {
-          const teamColorBg =
-            id && id.toString().toLowerCase().includes("barca") ? "#A50044" : "#0b1220";
-          const teamColorFg =
-            id && id.toString().toLowerCase().includes("barca") ? "#FFD400" : "#ffffff";
+          const teamColorBg = id && id.toString().toLowerCase().includes("barca") ? "#A50044" : "#0b1220";
+          const teamColorFg = id && id.toString().toLowerCase().includes("barca") ? "#FFD400" : "#ffffff";
           photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player", teamColorBg, teamColorFg);
         } else {
           const normalized = normalizeDataUrl(photoPreview);
@@ -345,20 +416,37 @@ export default function AddTeamPage(): JSX.Element {
           }
         }
 
+        // Normalize posiciones: convert display variants to acronyms
+        const normalizedPositions = (row.posiciones ?? []).map((pos) => {
+          const lower = String(pos).trim().toLowerCase();
+          const fromMap = DISPLAY_TO_ACRONYM[lower];
+          if (fromMap) return fromMap;
+          // try underscore/hyphen variants
+          const underscored = lower.replace(/\s+/g, "_");
+          const hyphened = lower.replace(/\s+/g, "-");
+          if (DISPLAY_TO_ACRONYM[underscored]) return DISPLAY_TO_ACRONYM[underscored];
+          if (DISPLAY_TO_ACRONYM[hyphened]) return DISPLAY_TO_ACRONYM[hyphened];
+          // fallback: if pos already looks like an acronym (1-3 letters), keep it
+          if (/^[a-z]{1,3}$/.test(lower)) return lower;
+          // otherwise try to map common words -> acronyms (best-effort)
+          if (lower.includes("goal")) return "gk";
+          if (lower.includes("back") && lower.includes("right")) return "rb";
+          if (lower.includes("back") && lower.includes("left")) return "lb";
+          // default: return underscored (may be a canonical key)
+          return underscored;
+        });
+
         imported.push({
           id: undefined,
           name: row.nombre || "",
           number: parseInt(row.numero) || 0,
-          positions: row.posiciones ?? [],
+          positions: normalizedPositions,
           photo: null,
           photoPreview,
-          isStarter: ["si", "sí", "yes", "true", "1", "x"].includes(
-            (row.titular || "").trim().toLowerCase()
-          ),
+          isStarter: ["si", "sí", "yes", "true", "1", "x"].includes((row.titular || "").trim().toLowerCase()),
           positionSlot: null,
         });
       }
-
       setPlayers((prev) => [...imported, ...prev]);
       setExpandedIndex(imported.length ? 0 : null);
     } catch (err) {
@@ -398,15 +486,11 @@ export default function AddTeamPage(): JSX.Element {
     setError(null);
     try {
       setLoading(true);
-
-      // 1) Validación: prohibir nombres duplicados (case-insensitive, trim)
       try {
         const allTeamsRes = await api.get("/teams");
         const allTeams: Team[] = allTeamsRes.data || [];
         const currentName = teamName.trim().toLowerCase();
-        const isDuplicate = allTeams.some(
-          (t) => t.name?.trim().toLowerCase() === currentName && String(t.id) !== String(id)
-        );
+        const isDuplicate = allTeams.some((t) => t.name?.trim().toLowerCase() === currentName && String(t.id) !== String(id));
         if (isDuplicate) {
           setError("Ya existe un equipo con ese nombre. Elige otro nombre único.");
           setLoading(false);
@@ -424,29 +508,24 @@ export default function AddTeamPage(): JSX.Element {
 
       let savedTeam: Team | null = null;
 
-      // Si estamos en edición (id presente), usamos PUT a /teams/:id
       if (id) {
         try {
           const res = await api.put(`/teams/${id}`, { ...teamPayload });
           savedTeam = res.data;
         } catch (putErr: any) {
           console.error("PUT /teams failed:", putErr);
-          // Mostrar detalle si existe
-          const detail =
-            putErr?.response?.data ?? putErr?.response?.statusText ?? putErr?.message ?? String(putErr);
+          const detail = putErr?.response?.data ?? putErr?.response?.statusText ?? putErr?.message ?? String(putErr);
           setError(`No se pudo actualizar el equipo. ${detail}`);
           setLoading(false);
           return;
         }
       } else {
-        // Nuevo equipo
         try {
           const res = await api.post(`/teams`, teamPayload);
           savedTeam = res.data;
         } catch (postErr: any) {
           console.error("POST /teams failed:", postErr);
-          const detail =
-            postErr?.response?.data ?? postErr?.response?.statusText ?? postErr?.message ?? String(postErr);
+          const detail = postErr?.response?.data ?? postErr?.response?.statusText ?? postErr?.message ?? String(postErr);
           setError(`No se pudo crear el equipo. ${detail}`);
           setLoading(false);
           return;
@@ -459,7 +538,6 @@ export default function AddTeamPage(): JSX.Element {
         return;
       }
 
-      // Guardar jugadores uno a uno; tolerante a fallos parciales
       const persistedPlayers: Player[] = [];
       const playerErrors: string[] = [];
 
@@ -467,13 +545,12 @@ export default function AddTeamPage(): JSX.Element {
         const payload = {
           name: p.name.trim(),
           number: Number(p.number) || 0,
-          positions: p.positions,
+          positions: p.positions, // acronyms
           photo: p.photoPreview ?? undefined,
           teamId: savedTeam.id,
           isStarter: !!p.isStarter,
           positionSlot: p.positionSlot ?? undefined,
         };
-
         if (p.id) {
           try {
             const res = await api.put(`/players/${p.id}`, { id: p.id, ...payload });
@@ -493,12 +570,10 @@ export default function AddTeamPage(): JSX.Element {
         }
       }
 
-      // Intentamos persistir la relación players en el equipo (opcional)
       try {
         await api.put(`/teams/${savedTeam.id}`, { ...savedTeam, players: persistedPlayers });
       } catch (err) {
         console.warn("PUT /teams (attach players) failed:", err);
-        // No abortamos; es opcional en json-server
       }
 
       if (playerErrors.length) {
@@ -516,6 +591,76 @@ export default function AddTeamPage(): JSX.Element {
       setLoading(false);
     }
   };
+
+  /* ---------- Load team & players ---------- */
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        if (id) {
+          const res = await api.get(`/teams/${id}`);
+          const tteam: Team = res.data;
+          setTeamName(tteam.name ?? "");
+          setTeamDescription(tteam.description ?? "");
+          setTeamLogoPreview(tteam.logo ?? null);
+
+          let rawPlayers: Player[] = Array.isArray((tteam as any).players) ? (tteam as any).players : [];
+          if (!rawPlayers.length) {
+            try {
+              const playersRes = await api.get("/players", { params: { teamId: id } });
+              rawPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
+            } catch (err) {
+              console.warn("No se pudieron cargar jugadores por teamId:", err);
+            }
+          }
+
+          // Normalize positions to acronyms on load
+          const mapped: PlayerForm[] = rawPlayers.map((p: Player) => {
+            const rawPositions = Array.isArray(p.positions) ? p.positions : typeof p.positions === "string" ? [p.positions] : [];
+            const normalizedPositions = rawPositions.map((pos) => {
+              const lower = String(pos).trim().toLowerCase();
+              const fromMap = DISPLAY_TO_ACRONYM[lower];
+              if (fromMap) return fromMap;
+              // try underscore/hyphen variants
+              const underscored = lower.replace(/\s+/g, "_");
+              const hyphened = lower.replace(/\s+/g, "-");
+              if (DISPLAY_TO_ACRONYM[underscored]) return DISPLAY_TO_ACRONYM[underscored];
+              if (DISPLAY_TO_ACRONYM[hyphened]) return DISPLAY_TO_ACRONYM[hyphened];
+              // if it's already an acronym-like string, keep it
+              if (/^[a-z]{1,3}$/.test(lower)) return lower;
+              // fallback heuristics
+              if (lower.includes("goal")) return "gk";
+              if (lower.includes("right")) return "rb";
+              if (lower.includes("left")) return "lb";
+              return underscored;
+            });
+            return {
+              id: p.id,
+              name: p.name ?? "",
+              number: p.number ?? 0,
+              positions: normalizedPositions,
+              photo: null,
+              photoPreview: p.photo ?? null,
+              isStarter: !!p.isStarter,
+              positionSlot: (p as any).positionSlot ?? null,
+            };
+          });
+          setPlayers(mapped);
+        } else {
+          setTeamName("");
+          setTeamDescription("");
+          setTeamLogoPreview(null);
+          setPlayers([]);
+        }
+      } catch (e) {
+        console.error("load team failed", e);
+        setError("No se pudo cargar el equipo.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
 
   /* ---------- Render ---------- */
   if (loading) {
@@ -552,21 +697,15 @@ export default function AddTeamPage(): JSX.Element {
               onClick={() => {
                 const form = document.getElementById("team-form") as HTMLFormElement | null;
                 if (form?.requestSubmit) form.requestSubmit();
-                else
-                  form?.dispatchEvent(
-                    new Event("submit", { cancelable: true, bubbles: true })
-                  );
+                else form?.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
               }}
             >
               {t("save_team")}
             </button>
           </div>
+
           <div className="form-top-right">
-            <button
-              type="button"
-              className="btn btn-back"
-              onClick={() => navigate(id ? `/teams/${id}` : "/teams")}
-            >
+            <button type="button" className="btn btn-back" onClick={() => navigate(id ? `/teams/${id}` : "/teams")}>
               {t("back")}
             </button>
           </div>
@@ -576,25 +715,12 @@ export default function AddTeamPage(): JSX.Element {
           <div className="team-grid">
             <div className="team-block">
               <label className="label">{t("team_name")}</label>
-              <input
-                className="input"
-                type="text"
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Team name"
-                required
-              />
+              <input className="input" type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)} placeholder="Team name" required />
             </div>
 
             <div className="team-block">
               <label className="label">{t("description")}</label>
-              <textarea
-                className="textarea"
-                value={teamDescription}
-                onChange={(e) => setTeamDescription(e.target.value)}
-                placeholder="Team description"
-                rows={3}
-              />
+              <textarea className="textarea" value={teamDescription} onChange={(e) => setTeamDescription(e.target.value)} placeholder="Team description" rows={3} />
             </div>
 
             <div className="team-block">
@@ -608,13 +734,7 @@ export default function AddTeamPage(): JSX.Element {
                     if (f) fileToDataUrl(f).then(setTeamLogoPreview);
                   }}
                 />
-                {teamLogoPreview && (
-                  <img
-                    src={normalizeDataUrl(teamLogoPreview) ?? undefined}
-                    alt="Logo preview"
-                    className="logo-preview"
-                  />
-                )}
+                {teamLogoPreview && <img src={normalizeDataUrl(teamLogoPreview) ?? undefined} alt="Logo preview" className="logo-preview" />}
               </div>
             </div>
           </div>
@@ -622,15 +742,10 @@ export default function AddTeamPage(): JSX.Element {
           <div className="players-header">
             <div className="players-header-row">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h3>Players ({players.length})</h3>
+                <h3>{t("players")} ({players.length})</h3>
                 <label
                   className="btn btn--gray"
-                  style={{
-                    cursor: "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
+                  style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
                 >
                   {t("import_players")}
                   <input
@@ -645,6 +760,7 @@ export default function AddTeamPage(): JSX.Element {
                   />
                 </label>
               </div>
+
               <div>
                 <button type="button" className="btn" onClick={addPlayer}>
                   + {t("add_player")}
@@ -656,35 +772,16 @@ export default function AddTeamPage(): JSX.Element {
           <div className="players-list">
             {players.map((p, i) => (
               <div key={p.id ?? i} className="player-card" data-player-index={i}>
-                <div
-                  className="player-summary"
-                  onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
-                  role="button"
-                  tabIndex={0}
-                >
+                <div className="player-summary" onClick={() => setExpandedIndex(expandedIndex === i ? null : i)} role="button" tabIndex={0}>
                   <div className="player-summary-left">
                     <span className="player-summary-name">{p.name || "New player"}</span>
-                    <span className="player-summary-number">
-                      {p.number ? `#${p.number}` : ""}
-                    </span>
-                    <span className="player-summary-positions">
-                      {p.positions && p.positions.length
-                        ? p.positions
-                            .map((rawPos: string) => {
-                              const normalized = String(rawPos).trim().toLowerCase().replace(/\s+/g, "_");
-                              const key = `positions.${normalized}`; // positions.goalkeeper, positions.gk, etc.
-                              const translated = t(key);
-                              // si no hay traducción, devolvemos el texto original
-                              return translated === key ? rawPos : translated;
-                            })
-                            .join(", ")
-                        : "—"}
-                    </span>
+                    <span className="player-summary-number">{p.number ? `#${p.number}` : ""}</span>
+                    {/* Muestra las abreviaturas traducidas (GK, RB, ...) */}
+                    <PlayerPositions positions={p.positions} className="player-summary-positions" />
                   </div>
+
                   <div>
-                    <span className="player-summary-starter">
-                      {p.isStarter ? t("in_matchday_squad") : ""}
-                    </span>
+                    <span className="player-summary-starter">{p.isStarter ? t("in_matchday_squad") : ""}</span>
                   </div>
                 </div>
 
@@ -692,28 +789,12 @@ export default function AddTeamPage(): JSX.Element {
                   <div className="player-editor">
                     <div className="player-row">
                       <label className="label">{t("name")}</label>
-                      <input
-                        className="input"
-                        type="text"
-                        value={p.name}
-                        onChange={(e) => updatePlayerField(i, "name", e.target.value)}
-                        placeholder="Full name"
-                        required
-                      />
+                      <input className="input" type="text" value={p.name} onChange={(e) => updatePlayerField(i, "name", e.target.value)} placeholder="Full name" required />
                     </div>
 
                     <div className="player-row">
                       <label className="label">{t("number")}</label>
-                      <input
-                        className="input"
-                        type="number"
-                        value={p.number}
-                        onChange={(e) =>
-                          updatePlayerField(i, "number", Number(e.target.value))
-                        }
-                        placeholder="7"
-                        min={0}
-                      />
+                      <input className="input" type="number" value={p.number} onChange={(e) => updatePlayerField(i, "number", Number(e.target.value))} placeholder="7" min={0} />
                     </div>
 
                     <div className="player-row">
@@ -723,16 +804,15 @@ export default function AddTeamPage(): JSX.Element {
                         multiple
                         value={p.positions}
                         onChange={(e) => {
-                          const selected = Array.from(e.target.selectedOptions).map(
-                            (o) => o.value
-                          );
+                          const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+                          // selected son abreviaturas (ej "gk","rb")
                           updatePlayerField(i, "positions", selected);
                         }}
-                        size={4}
+                        size={6}
                       >
                         {POS_OPTIONS.map((opt) => (
-                          <option key={opt.v} value={opt.v}>
-                            {opt.t}
+                          <option key={opt.value} value={opt.value}>
+                            {t(opt.labelKey)}
                           </option>
                         ))}
                       </select>
@@ -742,22 +822,10 @@ export default function AddTeamPage(): JSX.Element {
                     <div className="player-row">
                       <label className="label">{t("photo")}</label>
                       <div className="file-row">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) =>
-                            handlePlayerPhotoChange(i, e.target.files?.[0] ?? null)
-                          }
-                        />
+                        <input type="file" accept="image/*" onChange={(e) => handlePlayerPhotoChange(i, e.target.files?.[0] ?? null)} />
                         {(() => {
                           const normalized = normalizeDataUrl(p.photoPreview);
-                          const finalSrc =
-                            normalized ??
-                            generatePlayerSvgDataUrl(
-                              p.name || `Player ${i}`,
-                              "#0b1220",
-                              "#ffffff"
-                            );
+                          const finalSrc = normalized ?? generatePlayerSvgDataUrl(p.name || `Player ${i}`, "#0b1220", "#ffffff");
                           return (
                             <img
                               key={`player-img-${i}-${p.name?.replace(/\s+/g, "-")}`}
@@ -770,11 +838,7 @@ export default function AddTeamPage(): JSX.Element {
                               onError={(e) => {
                                 const target = e.currentTarget as HTMLImageElement;
                                 target.onerror = null;
-                                target.src = generatePlayerSvgDataUrl(
-                                  p.name || `Player ${i}`,
-                                  "#0b1220",
-                                  "#ffffff"
-                                );
+                                target.src = generatePlayerSvgDataUrl(p.name || `Player ${i}`, "#0b1220", "#ffffff");
                               }}
                             />
                           );
@@ -784,41 +848,20 @@ export default function AddTeamPage(): JSX.Element {
 
                     <div className="player-row-inline">
                       <label className="checkbox">
-                        <input
-                          type="checkbox"
-                          checked={!!p.isStarter}
-                          onChange={(e) =>
-                            updatePlayerField(i, "isStarter", e.target.checked)
-                          }
-                        />
+                        <input type="checkbox" checked={!!p.isStarter} onChange={(e) => updatePlayerField(i, "isStarter", e.target.checked)} />
                         {t("in_matchday_squad")}
                       </label>
                     </div>
 
-                    <div
-                      className="player-actions"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: 12,
-                      }}
-                    >
+                    <div className="player-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                       <div>
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={() => savePlayer(i)}
-                        >
+                        <button type="button" className="btn" onClick={() => savePlayer(i)}>
                           {t("save_player")}
                         </button>
                       </div>
+
                       <div>
-                        <button
-                          type="button"
-                          className="btn btn--danger"
-                          onClick={() => removePlayer(i)}
-                        >
+                        <button type="button" className="btn btn--danger" onClick={() => removePlayer(i)}>
                           {t("remove")}
                         </button>
                       </div>
