@@ -1,82 +1,54 @@
-.language-switcher {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 44px;
-  z-index: 9999;
-}
+/* src/components/LanguageSwitcher.css */
 
-/* botón base sin fondo blanco */
-.ls-btn {
-  border: none;
-  background: transparent; /* transparente */
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  outline: none;
-  display: inline-flex;
+/* Inline container (mantiene la posición original en el menú) */
+.language-switcher-inline { width: 44px; height: 44px; }
+
+/* botón base (transparente) */
+.ls-btn { border: none; background: transparent; padding: 0; margin: 0; cursor: pointer; outline: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* botón principal circular (sin fondo blanco) */
+.ls-main { width: 44px; height: 44px; border-radius: 50%; background: transparent; box-shadow: none; }
+
+/* contenedor de la bandera */
+.ls-flag { width: 32px; height: 24px; display: inline-block; overflow: hidden; border-radius: 4px; background: transparent; }
+
+/* portal popover wrapper (posicionado por inline style desde TSX) */
+.ls-portal { pointer-events: none; }
+
+/* caja interna visible del popover */
+.ls-popover-portal {
+  pointer-events: auto;
+  display: flex;
+  gap: 8px;
+  background: transparent;
+  padding: 6px;
+  border-radius: 8px;
   align-items: center;
   justify-content: center;
 }
 
-/* botón principal: círculo pero sin fondo sólido */
-.ls-main {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: transparent; /* transparente */
-  box-shadow: none; /* sin sombra si no quieres fondo */
-  transition: transform 160ms ease, box-shadow 160ms ease;
-}
-
-/* efecto hover sutil (sin fondo) */
-.ls-main:hover { transform: translateY(-2px); }
-
-/* contenedor de la bandera (sin fondo blanco) */
-.ls-flag {
-  width: 32px;
-  height: 24px;
-  display: inline-block;
-  overflow: hidden;
-  border-radius: 4px;
-  background: transparent;
-}
-
-/* popover */
-.ls-popover {
-  position: absolute;
-  top: -72px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms ease, transform 180ms ease;
-}
-
-/* abierto */
-.language-switcher.open .ls-popover {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* opciones: círculos sin fondo blanco */
+/* botones de opción dentro del portal */
 .ls-option {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: transparent; /* transparente */
-  box-shadow: none;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: transform 140ms ease;
+  border: none;
+  cursor: pointer;
 }
 
-/* hover */
+/* efecto hover */
 .ls-option:hover { transform: translateY(-4px); }
 
-/* SVG ajuste */
+/* escalado correcto del SVG */
 .ls-btn .ls-flag svg { width: 100%; height: 100%; display: block; }
+
+/* foco accesible */
+.ls-btn:focus { outline: 2px solid rgba(0,0,0,0.12); outline-offset: 2px; }
+
+/* transform origin para animaciones */
+.ls-popover-portal { transform-origin: center bottom; }

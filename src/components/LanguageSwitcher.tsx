@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* src/components/LanguageSwitcher.tsx */
 import React, { JSX, useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import "./LanguageSwitcher.css";
 import { useI18n } from "../i18n/I18nProvider";
 
@@ -30,76 +31,75 @@ const FLAGS: Record<LangCode, JSX.Element> = {
 };
 
 export default function LanguageSwitcher(): JSX.Element {
-  const i18n = useI18n() as { lang?: string; setLang?: (l: string) => void } | any;
-  const lang = i18n?.lang ?? "en";
-  const setLang = i18n?.setLang;
-
+  const { lang, setLang } = useI18n() as { lang: string; setLang: (l: string) => void };
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const [coords, setCoords] = useState<{ left: number; top: number; width: number } | null>(null);
 
   const current = (lang === "es" || lang === "sl") ? (lang as LangCode) : "en";
+  const others: LangCode[] = (["en", "es", "sl"] as LangCode[]).filter((c) => c !== current);
+
+  const updateCoords = () => {
+    const btn = buttonRef.current;
+    if (!btn) return setCoords(null);
+    const rect = btn.getBoundingClientRect();
+    setCoords({ left: rect.left + rect.width / 2, top: rect.top, width: rect.width });
+  };
 
   useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+    if (open) updateCoords();
+  }, [open]);
+
+  useEffect(() => {
+    const onResize = () => { if (open) updateCoords(); };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    function onDocDown(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (!buttonRef.current) return;
+      const pop = document.getElementById("ls-portal-popover");
+      if (buttonRef.current.contains(target as Node)) return;
+      if (pop && pop.contains(target as Node)) return;
+      setOpen(false);
     }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
+    document.addEventListener("mousedown", onDocDown, true);
+    return () => document.removeEventListener("mousedown", onDocDown, true);
   }, []);
-
-  // debug: si no abre, mira la consola para ver estos logs
-  useEffect(() => {
-    console.debug("[LanguageSwitcher] mounted, current lang:", lang);
-  }, [lang]);
 
   const handleSelect = (code: LangCode) => {
     setOpen(false);
-    if (typeof setLang === "function") {
-      setLang(code);
-      return;
-    }
-    window.dispatchEvent(new CustomEvent("app:setLang", { detail: { lang: code } }));
+    setLang(code); // tu provider expone setLang, lo usamos directamente
   };
 
-  const others: LangCode[] = (["en", "es", "sl"] as LangCode[]).filter((c) => c !== current);
-
-  return (
+  const popover = open && coords ? ReactDOM.createPortal(
     <div
-      ref={ref}
-      className={`language-switcher ${open ? "open" : ""}`}
-      aria-hidden={false}
-      data-current={current}
+      id="ls-portal-popover"
+      className="ls-portal"
+      style={{
+        position: "fixed",
+        left: coords.left,
+        top: coords.top - 8,
+        transform: "translate(-50%, -100%)",
+        zIndex: 2147483647,
+        pointerEvents: "auto",
+      }}
+      role="menu"
+      aria-hidden={!open}
     >
-      <button
-        type="button"
-        className="ls-btn ls-main"
-        onClick={(e) => {
-          e.stopPropagation();
-          console.debug("[LanguageSwitcher] main clicked, open before:", open);
-          setOpen((s) => {
-            const next = !s;
-            console.debug("[LanguageSwitcher] toggling open ->", next);
-            return next;
-          });
-        }}
-        aria-label="Cambiar idioma"
-        title={current.toUpperCase()}
-      >
-        <span className="ls-flag">{FLAGS[current]}</span>
-      </button>
-
-      <div className="ls-popover" role="menu" aria-hidden={!open}>
+      <div className="ls-popover-portal">
         {others.map((c) => (
           <button
             key={c}
             type="button"
             className="ls-btn ls-option"
-            onClick={(e) => {
-              e.stopPropagation();
-              console.debug("[LanguageSwitcher] option clicked:", c);
-              handleSelect(c);
-            }}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleSelect(c); }}
             aria-label={`Cambiar a ${c}`}
             title={c.toUpperCase()}
           >
@@ -107,6 +107,26 @@ export default function LanguageSwitcher(): JSX.Element {
           </button>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <>
+      <div className="language-switcher-inline" style={{ display: "inline-block" }}>
+        <button
+          ref={buttonRef}
+          type="button"
+          className="ls-btn ls-main"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((s) => !s); }}
+          aria-label="Cambiar idioma"
+          title={current.toUpperCase()}
+        >
+          <span className="ls-flag">{FLAGS[current]}</span>
+        </button>
+      </div>
+
+      {popover}
+    </>
   );
 }
