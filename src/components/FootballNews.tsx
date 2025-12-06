@@ -1,6 +1,8 @@
 // src/components/FootballNews.tsx
 import React, { useEffect, useState } from "react";
 import "./FootballNews.css";
+import { useI18n } from "../i18n/I18nProvider";
+import { langToAcronym } from "../utils/langAcronym";
 
 type NewsArticle = {
   source?: { id?: string | null; name?: string | null };
@@ -14,6 +16,9 @@ type NewsArticle = {
 };
 
 export default function FootballNews() {
+  const { t } = useI18n();
+  const { lang } = useI18n();
+  let langAcronym = langToAcronym(lang);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +37,11 @@ export default function FootballNews() {
           setArticles([]);
           return;
         }
+        if(langAcronym!="es"){
+          langAcronym = "en";
+        }
 
-        const url = `https://newsapi.org/v2/everything?q=fútbol&language=en&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
+        const url = `https://newsapi.org/v2/everything?q=fútbol&language=${langAcronym}&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
         const data = await res.json();
@@ -44,7 +52,7 @@ export default function FootballNews() {
       } catch (err) {
         console.error("load news failed", err);
         if (!cancelled) {
-          setError("No se pudieron cargar noticias.");
+          setError("News could not be loaded.");
           setArticles([]);
         }
       } finally {
@@ -58,9 +66,9 @@ export default function FootballNews() {
 
   return (
     <section className="football-news">
-      <h3>Latest soccer news</h3>
+      <h3>{t("latest_soccer_news")}</h3>
 
-      {loading && <p>Loading news...</p>}
+      {loading && <p>{t("loading")}</p>}
       {error && <p className="news-error">{error}</p>}
       {!loading && !error && articles.length === 0 && (
         <p>No se han encontrado noticias recientes.</p>

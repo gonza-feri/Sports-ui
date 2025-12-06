@@ -9,7 +9,9 @@ import Info from "../components/Info";
 import Warning from "../components/Warning";
 import PlayerCard from "../components/PlayerCard";
 import PlayerModal from "../components/PlayerModal";
+import { useI18n } from "../i18n/I18nProvider";
 import "./TeamDetailPage.css";
+import { langToAcronym } from "../utils/langAcronym";
 
 /* ---------- Tipos locales ---------- */
 type LineupSlot = {
@@ -107,6 +109,9 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
 export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const { lang } = useI18n();
+  let langAcronym = langToAcronym(lang);
 
   /* ---------- Estado y refs (todos los hooks al inicio) ---------- */
   const [team, setTeam] = useState<TeamWithExtras | null>(null);
@@ -160,8 +165,8 @@ export default function TeamDetailPage(): JSX.Element {
           api.get(`/players`, { params: { teamId: id } }),
         ]);
         if (cancelled) return;
-        const t = teamRes.data as TeamWithExtras;
-        setTeam(t);
+        const tTeam = teamRes.data as TeamWithExtras;
+        setTeam(tTeam);
         const plsRaw: unknown[] = Array.isArray(playersRes.data) ? playersRes.data : [];
         const pls: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
@@ -176,7 +181,6 @@ export default function TeamDetailPage(): JSX.Element {
                 : 0,
             positions: Array.isArray(p.positions) ? (p.positions as string[]) : typeof p.positions === "string" ? [p.positions as string] : [],
             photo: typeof p.photo === "string" ? p.photo : null,
-            // ensure photoPreview exists to satisfy your Player type
             photoPreview: typeof p.photo === "string" ? (p.photo as string) : placeholderImg,
             isStarter: Boolean(p.isStarter),
           } as Player;
@@ -279,7 +283,12 @@ export default function TeamDetailPage(): JSX.Element {
           "espn.com",
           "bbc.com",
         ].join(",");
-        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(
+
+        if(langAcronym!="es"){
+          langAcronym = "en";
+        }
+
+        const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=${langAcronym}&sortBy=publishedAt&pageSize=20&domains=${encodeURIComponent(
           domains
         )}&searchIn=title,description&apiKey=${apiKey}`;
         const res = await fetch(url);
@@ -506,12 +515,12 @@ export default function TeamDetailPage(): JSX.Element {
     try {
       const payload = { ...team, lineup: fieldSlots };
       await api.put(`/teams/${id}`, payload);
-      setSaveMessage("Alineación guardada correctamente.");
+      setSaveMessage(t("save_lineup_success") ?? "Alineación guardada correctamente.");
       saveLineupToStorage(id, fieldSlots);
       setTeam((prev) => (prev ? ({ ...prev, lineup: fieldSlots } as TeamWithExtras) : prev));
     } catch (err) {
       console.error("save lineup failed", err);
-      setSaveMessage("Error al guardar la alineación.");
+      setSaveMessage(t("save_lineup_error") ?? "Error al guardar la alineación.");
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMessage(null), 3500);
@@ -547,7 +556,7 @@ export default function TeamDetailPage(): JSX.Element {
       <section className="page-wrapper team-page">
         {loading ? (
           <div style={{ padding: 24 }}>
-            <p>Loading...</p>
+            <p>{t("loading")}</p>
           </div>
         ) : (
           <>
@@ -557,20 +566,26 @@ export default function TeamDetailPage(): JSX.Element {
               <div className="team-header-left">
                 {crestUrl && <img src={crestUrl} alt={`${team?.name} crest`} className="team-crest" />}
                 <div className="team-title-block">
-                  <h2>{team?.name ?? "Team"}</h2>
+                  <h2>{team?.name ?? t("team") ?? "Team"}</h2>
                   {team?.description && (
                     <div className="team-desc-wrapper">
                       <p className={`team-desc-inline ${showFullDesc ? "expanded" : "collapsed"}`}> {team.description} </p>
                       {typeof team.description === "string" && team.description.length > 240 && (
                         <button type="button" className="desc-toggle" onClick={() => setShowFullDesc((s) => !s)} aria-expanded={showFullDesc}>
-                          {showFullDesc ? "Mostrar menos" : "Mostrar más"}
+                          {showFullDesc ? (t("show_less") ?? "Mostrar menos") : (t("show_more") ?? "Mostrar más")}
                         </button>
                       )}
                     </div>
                   )}
                 </div>
-                <button className="btn btn-save header-save" onClick={handleSaveLineup} disabled={saving} aria-label="Save lineup" title="Guardar alineación">
-                  {saving ? "Guardando..." : "Save lineup"}
+                <button
+                  className="btn btn-save header-save"
+                  onClick={handleSaveLineup}
+                  disabled={saving}
+                  aria-label={t("save_lineup")}
+                  title={t("save_lineup")}
+                >
+                  {saving ? (t("saving") ?? "Guardando...") : t("save_lineup")}
                 </button>
                 <button
                   className="btn btn-edit"
@@ -578,30 +593,30 @@ export default function TeamDetailPage(): JSX.Element {
                     if (!id) return;
                     navigate(`/teams/add/${id}`);
                   }}
-                  title="Editar equipo"
+                  title={t("edit_team")}
                 >
-                  Edit team
+                  {t("edit_team")}
                 </button>
                 {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
               </div>
 
               <div className="team-header-actions">
-                <button className="btn btn-back" onClick={() => navigate("/teams")}>Back</button>
+                <button className="btn btn-back" onClick={() => navigate("/teams")}>{t("back")}</button>
               </div>
             </header>
 
             <main className="team-main">
               {/* Tabs: Lineup / Players */}
               <div className="tabs" style={{ marginTop: 8 }}>
-                <div className={`tab ${activeTab === "lineup" ? "tab--active" : ""}`} onClick={() => setActiveTab("lineup")}>Lineup</div>
-                <div className={`tab ${activeTab === "players" ? "tab--active" : ""}`} onClick={() => setActiveTab("players")}>Players</div>
+                <div className={`tab ${activeTab === "lineup" ? "tab--active" : ""}`} onClick={() => setActiveTab("lineup")}>{t("lineup")}</div>
+                <div className={`tab ${activeTab === "players" ? "tab--active" : ""}`} onClick={() => setActiveTab("players")}>{t("players")}</div>
               </div>
 
               {/* Conditional content */}
               {activeTab === "lineup" ? (
                 <div className="team-layout">
-                  <div className="field-area" aria-label="Field">
-                    <div className="football-field" role="img" aria-label="Football field" ref={fieldRef}>
+                  <div className="field-area" aria-label={t("field_aria") ?? "Field"}>
+                    <div className="football-field" role="img" aria-label={t("football_field_aria") ?? "Football field"} ref={fieldRef}>
                       <div className="half-line-horizontal" />
                       <div className="center-circle" />
                       <div className="penalty-top" />
@@ -636,7 +651,7 @@ export default function TeamDetailPage(): JSX.Element {
                               >
                                 <img src={(player as any).photoPreview ?? placeholderImg} alt={player.name} className="chip-photo large" />
                                 <div className="chip-info centered">
-                                  <div className="chip-name">{player.name ?? "Unknown player"}</div>
+                                  <div className="chip-name">{player.name ?? (t("unknown_player") ?? "Unknown player")}</div>
                                   <div className="chip-number">#{player.number}</div>
                                 </div>
                               </div>
@@ -649,20 +664,20 @@ export default function TeamDetailPage(): JSX.Element {
                     </div>
 
                     <div className="field-actions" style={{ marginTop: 12 }}>
-                      <button className="btn btn-reset" onClick={resetToInitial}>Reset to initial</button>
-                      <button className="btn btn-clear" onClick={clearField}>Clean soccer field</button>
+                      <button className="btn btn-reset" onClick={resetToInitial}>{t("reset_to_initial")}</button>
+                      <button className="btn btn-clear" onClick={clearField}>{t("clean_soccer_field") ?? "Clean soccer field"}</button>
                     </div>
                   </div>
 
                   <aside
                     className="bench-area"
-                    aria-label="Bench and full squad"
+                    aria-label={t("bench_aria") ?? "Bench and full squad"}
                     ref={benchRef}
                     onDragOver={(e) => { e.preventDefault(); }}
                     onDrop={onDropToBench}
                     style={benchHeightPx ? { height: `${benchHeightPx}px`, maxHeight: `${benchHeightPx}px` } : undefined}
                   >
-                    <h3>Matchday Squad (Bench)</h3>
+                    <h3>{t("matchday_squad_bench")}</h3>
                     <div className="bench-list">
                       {startersBench.map((p) => (
                         <div
@@ -677,15 +692,15 @@ export default function TeamDetailPage(): JSX.Element {
                         >
                           <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                           <div className="bench-info small">
-                            <div className="bench-name">{p.name ?? "Unknown player"}</div>
+                            <div className="bench-name">{p.name ?? (t("unknown_player") ?? "Unknown player")}</div>
                             <div className="bench-pos">{(p.positions || []).join(", ")}</div>
                           </div>
-                          <div className="bench-meta"><span className="badge starter">In the matchday squad</span></div>
+                          <div className="bench-meta"><span className="badge starter">{t("in_matchday_squad") ?? "In the matchday squad"}</span></div>
                         </div>
                       ))}
                     </div>
 
-                    <h3 style={{ marginTop: 12 }}>Not in the Matchday Squad</h3>
+                    <h3 style={{ marginTop: 12 }}>{t("not_in_matchday_squad")}</h3>
                     <div className="bench-list">
                       {substitutesBench.map((p) => (
                         <div
@@ -699,10 +714,10 @@ export default function TeamDetailPage(): JSX.Element {
                         >
                           <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                           <div className="bench-info small">
-                            <div className="bench-name">{p.name ?? "Unknown player"}</div>
+                            <div className="bench-name">{p.name ?? (t("unknown_player") ?? "Unknown player")}</div>
                             <div className="bench-pos">{(p.positions || []).join(", ")}</div>
                           </div>
-                          <div className="bench-meta"><span className="badge">Not in the Matchday Squad</span></div>
+                          <div className="bench-meta"><span className="badge">{t("not_in_matchday") ?? "Not in the Matchday Squad"}</span></div>
                         </div>
                       ))}
                     </div>
@@ -714,18 +729,20 @@ export default function TeamDetailPage(): JSX.Element {
                   <div style={{ marginBottom: 12, display: "flex", gap: 8, alignItems: "center" }}>
                     <input
                       type="search"
-                      placeholder="Search players..."
+                      placeholder={t("search_players")}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="teams-search-input"
                       style={{ width: "100%", maxWidth: 420, padding: "8px 12px", borderRadius: 8 }}
                     />
-                    <div style={{ color: "#c0c7d0", fontSize: 14 }}>{filteredPlayers.length} players</div>
+                    <div style={{ color: "#c0c7d0", fontSize: 14 }}>
+                      {filteredPlayers.length} {t("players")}
+                    </div>
                   </div>
 
                   <div className="players-grid">
                     {filteredPlayers.length === 0 ? (
-                      <div style={{ marginTop: 12, color: "#c0c7d0" }}>No players found.</div>
+                      <div style={{ marginTop: 12, color: "#c0c7d0" }}>{t("no_players_found")}</div>
                     ) : (
                       filteredPlayers.map((p) => (
                         <PlayerCard
@@ -742,10 +759,12 @@ export default function TeamDetailPage(): JSX.Element {
               )}
 
               <section className="team-news">
-                <h3>Latest news about {team?.name}</h3>
-                {newsLoading && <p>Loading news...</p>}
+                <h3>{t("latest_news_about") ?? "Latest news about"} {team?.name}</h3>
+                {newsLoading && <p>{t("loading")}</p>}
                 {newsError && <p className="news-error">{newsError}</p>}
-                {!newsLoading && !newsError && news && news.length === 0 && <p>No recent news found for “{team?.name}”.</p>}
+                {!newsLoading && !newsError && news && news.length === 0 && (
+                  <p>{t("no_recent_news_found")} {team?.name}</p>
+                )}
                 {!newsLoading && !newsError && news && news.length > 0 && (
                   <div className="news-list">
                     {news.map((article) => (

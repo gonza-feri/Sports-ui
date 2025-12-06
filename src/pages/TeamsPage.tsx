@@ -1,4 +1,5 @@
 // src/pages/TeamsPage.tsx
+import { useI18n } from "../i18n/I18nProvider";
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -14,6 +15,7 @@ type Team = {
 };
 
 export default function TeamsPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,20 +93,20 @@ export default function TeamsPage() {
     <div>
       <Menu />
       <section className="page-wrapper" ref={wrapperRef}>
-        <h2>Teams</h2>
+        <h2>{t("teams")}</h2>
 
         {/* Buscador */}
         <div className="team-search">
           <input
             type="text"
-            placeholder="Search for team..."
+            placeholder={t("search_for_team")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
         </div>
 
-        {loading && <p>Cargando equipos...</p>}
+        {loading && <p>{t("loading")}</p>}
         {error && <p className="error">{error}</p>}
 
         <ul className="team-list" role="list">
@@ -158,7 +160,7 @@ export default function TeamsPage() {
                         navigate(`/teams/${team.id}`);
                       }}
                     >
-                      Enter
+                      {t("enter")}
                     </li>
                     <li
                       role="menuitem"
@@ -168,7 +170,7 @@ export default function TeamsPage() {
                         navigate(`/teams/add/${team.id}`);
                       }}
                     >
-                      Edit
+                      {t("edit")}
                     </li>
                     <li
                       role="menuitem"
@@ -178,7 +180,7 @@ export default function TeamsPage() {
                         handleDelete(team.id);
                       }}
                     >
-                      Remove
+                      {t("remove")}
                     </li>
                   </ul>
                 )}

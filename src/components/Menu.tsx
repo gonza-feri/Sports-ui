@@ -1,14 +1,19 @@
+// src/components/Menu.tsx
+import { useI18n } from "../i18n/I18nProvider";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import logo from "../assets/logo-dl.png";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function Menu() {
+  const { t } = useI18n();
   const location = useLocation();
   const navigate = useNavigate();
+
   const isTeamsAdd = location.pathname.startsWith("/teams/add");
 
-  // 👇 estado para mostrar/ocultar el header
-  const [showHeader, ] = useState(true);
+  // estado para mostrar/ocultar el header
+  const [showHeader] = useState(true);
 
   useEffect(() => {
     const headerEl = document.querySelector(".app-header") as HTMLElement | null;
@@ -23,7 +28,7 @@ export default function Menu() {
     return () => window.removeEventListener("resize", updateOffset);
   }, []);
 
-  // 👇 función genérica para confirmar salida
+  // función genérica para confirmar salida
   const handleNavClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
     if (isTeamsAdd) {
@@ -40,7 +45,11 @@ export default function Menu() {
     <header className={`app-header ${showHeader ? "visible" : "hidden"}`}>
       {/* Logo + título como enlace */}
       <div className="logo-area">
-        <a href="/" onClick={(e) => handleNavClick(e, "/")} className="logo-link">
+        <a
+          href="/"
+          onClick={(e) => handleNavClick(e, "/")}
+          className="logo-link"
+        >
           <img src={logo} alt="Dream League logo" className="logo-img" />
           <h1>Dream League</h1>
         </a>
@@ -48,6 +57,14 @@ export default function Menu() {
 
       {/* Navegación */}
       <nav className="nav-text">
+        {/* Selector de idioma (a la izquierda de Home) */}
+        <div
+          className="nav-item"
+          style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+        >
+          <LanguageSwitcher />
+        </div>
+
         <a
           href="/"
           onClick={(e) => handleNavClick(e, "/")}
@@ -59,8 +76,9 @@ export default function Menu() {
               : "nav-item inactive"
           }
         >
-          Home
+          {t("home")}
         </a>
+
         <a
           href="/teams"
           onClick={(e) => handleNavClick(e, "/teams")}
@@ -72,7 +90,7 @@ export default function Menu() {
               : "nav-item inactive"
           }
         >
-          Teams
+          {t("teams")}
         </a>
       </nav>
     </header>

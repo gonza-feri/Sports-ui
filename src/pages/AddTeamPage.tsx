@@ -6,24 +6,31 @@ import api from "../services/api";
 import type { Team, Player, PlayerForm } from "../types/types";
 import Menu from "../components/Menu";
 import "./AddTeamPage.css";
+import { useI18n } from "../i18n/I18nProvider";
 
-const POS_OPTIONS = [
-  { v: "GK", t: "Goalkeeper (GK)" },
-  { v: "RB", t: "Right Back (RB)" },
-  { v: "LB", t: "Left Back (LB)" },
-  { v: "FB", t: "Full Back (FB)" },
-  { v: "CB", t: "Centre-Back (CB)" },
-  { v: "DM", t: "Defensive Midfielder (DM)" },
-  { v: "CM", t: "Central Midfielder (CM)" },
-  { v: "AM", t: "Attacking Midfielder (AM)" },
-  { v: "RW", t: "Right Winger (RW)" },
-  { v: "LW", t: "Left Winger (LW)" },
-  { v: "W", t: "Winger (W)" },
-  { v: "CF", t: "Centre Forward (CF)" },
-  { v: "ST", t: "Striker (ST)" },
-];
+
 
 export default function AddTeamPage(): JSX.Element {
+  const { t } = useI18n();
+
+  
+
+  const POS_OPTIONS = [
+  { v: t("gk"), t: t("goalkeeper") },
+  { v: t("rb"), t: t("right_back") },
+  { v: t("lb"), t: t("left_back") },
+  { v: t("fb"), t: t("full_back") },
+  { v: t("cb"), t: t("centre-back") },
+  { v: t("dm"), t: t("defensive_midfielder") },
+  { v: t("cm"), t: t("central_midfielder") },
+  { v: t("am"), t: t("attacking_midfielder") },
+  { v: t("rw"), t: t("right_winger") },
+  { v: t("lw"), t: t("left_winger") },
+  { v: t("w"), t: t("winger") },
+  { v: t("cf"), t: t("centre_forward") },
+  { v: t("st"), t: t("striker") },
+];
+
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -516,7 +523,7 @@ export default function AddTeamPage(): JSX.Element {
       <div>
         <Menu />
         <section className="page-wrapper">
-          <p>Loading...</p>
+          <p>{t("loading")}</p>
         </section>
       </div>
     );
@@ -527,10 +534,10 @@ export default function AddTeamPage(): JSX.Element {
       <Menu />
       <section className="page-wrapper">
         <header className="editor-header">
-          <h2>{id ? "Edit team" : "Add team"}</h2>
+          <h2>{id ? t("edit_team") : t("add_team")}</h2>
           <div className="editor-actions">
             <button className="btn" onClick={handleExportCSV}>
-              Export players CSV file
+              {t("export_players")}
             </button>
           </div>
         </header>
@@ -551,7 +558,7 @@ export default function AddTeamPage(): JSX.Element {
                   );
               }}
             >
-              Save team
+              {t("save_team")}
             </button>
           </div>
           <div className="form-top-right">
@@ -560,7 +567,7 @@ export default function AddTeamPage(): JSX.Element {
               className="btn btn-back"
               onClick={() => navigate(id ? `/teams/${id}` : "/teams")}
             >
-              Back
+              {t("back")}
             </button>
           </div>
         </div>
@@ -568,7 +575,7 @@ export default function AddTeamPage(): JSX.Element {
         <form id="team-form" onSubmit={handleSubmit} className="team-form">
           <div className="team-grid">
             <div className="team-block">
-              <label className="label">Team name</label>
+              <label className="label">{t("team_name")}</label>
               <input
                 className="input"
                 type="text"
@@ -580,7 +587,7 @@ export default function AddTeamPage(): JSX.Element {
             </div>
 
             <div className="team-block">
-              <label className="label">Description</label>
+              <label className="label">{t("description")}</label>
               <textarea
                 className="textarea"
                 value={teamDescription}
@@ -591,7 +598,7 @@ export default function AddTeamPage(): JSX.Element {
             </div>
 
             <div className="team-block">
-              <label className="label">Logo</label>
+              <label className="label">{t("shield")}</label>
               <div className="file-row">
                 <input
                   type="file"
@@ -625,7 +632,7 @@ export default function AddTeamPage(): JSX.Element {
                     gap: 8,
                   }}
                 >
-                  Import players CSV file
+                  {t("import_players")}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -640,7 +647,7 @@ export default function AddTeamPage(): JSX.Element {
               </div>
               <div>
                 <button type="button" className="btn" onClick={addPlayer}>
-                  + Add Player
+                  + {t("add_player")}
                 </button>
               </div>
             </div>
@@ -661,12 +668,22 @@ export default function AddTeamPage(): JSX.Element {
                       {p.number ? `#${p.number}` : ""}
                     </span>
                     <span className="player-summary-positions">
-                      {p.positions && p.positions.length ? p.positions.join(", ") : "—"}
+                      {p.positions && p.positions.length
+                        ? p.positions
+                            .map((rawPos: string) => {
+                              const normalized = String(rawPos).trim().toLowerCase().replace(/\s+/g, "_");
+                              const key = `positions.${normalized}`; // positions.goalkeeper, positions.gk, etc.
+                              const translated = t(key);
+                              // si no hay traducción, devolvemos el texto original
+                              return translated === key ? rawPos : translated;
+                            })
+                            .join(", ")
+                        : "—"}
                     </span>
                   </div>
                   <div>
                     <span className="player-summary-starter">
-                      {p.isStarter ? "In the matchday squad" : ""}
+                      {p.isStarter ? t("in_matchday_squad") : ""}
                     </span>
                   </div>
                 </div>
@@ -674,7 +691,7 @@ export default function AddTeamPage(): JSX.Element {
                 {expandedIndex === i && (
                   <div className="player-editor">
                     <div className="player-row">
-                      <label className="label">Name</label>
+                      <label className="label">{t("name")}</label>
                       <input
                         className="input"
                         type="text"
@@ -686,7 +703,7 @@ export default function AddTeamPage(): JSX.Element {
                     </div>
 
                     <div className="player-row">
-                      <label className="label">Number</label>
+                      <label className="label">{t("number")}</label>
                       <input
                         className="input"
                         type="number"
@@ -700,7 +717,7 @@ export default function AddTeamPage(): JSX.Element {
                     </div>
 
                     <div className="player-row">
-                      <label className="label">Positions</label>
+                      <label className="label">{t("positions")}</label>
                       <select
                         className="input"
                         multiple
@@ -719,11 +736,11 @@ export default function AddTeamPage(): JSX.Element {
                           </option>
                         ))}
                       </select>
-                      <div className="hint">Hold Ctrl (Cmd on Mac) to select multiple</div>
+                      <div className="hint">{t("select_multiple_positions")}</div>
                     </div>
 
                     <div className="player-row">
-                      <label className="label">Photo</label>
+                      <label className="label">{t("photo")}</label>
                       <div className="file-row">
                         <input
                           type="file"
@@ -774,7 +791,7 @@ export default function AddTeamPage(): JSX.Element {
                             updatePlayerField(i, "isStarter", e.target.checked)
                           }
                         />
-                        In the matchday squad
+                        {t("in_matchday_squad")}
                       </label>
                     </div>
 
@@ -793,7 +810,7 @@ export default function AddTeamPage(): JSX.Element {
                           className="btn"
                           onClick={() => savePlayer(i)}
                         >
-                          Save player
+                          {t("save_player")}
                         </button>
                       </div>
                       <div>
@@ -802,7 +819,7 @@ export default function AddTeamPage(): JSX.Element {
                           className="btn btn--danger"
                           onClick={() => removePlayer(i)}
                         >
-                          Delete
+                          {t("remove")}
                         </button>
                       </div>
                     </div>

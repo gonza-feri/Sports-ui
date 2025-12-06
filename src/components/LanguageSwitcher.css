@@ -1,0 +1,5 @@
+.lang-switcher { display:flex; gap:6px; align-items:center; }
+.lang-btn { background:transparent; border:none; cursor:pointer; padding:6px; font-size:18px; border-radius:6px; }
+.lang-btn:hover { background: rgba(255,255,255,0.03); transform: translateY(-1px); }
+.lang-btn.active { background: rgba(255,255,255,0.06); box-shadow: 0 4px 10px rgba(0,0,0,0.18); }
+.flag { display:inline-block; }
