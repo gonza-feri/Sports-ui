@@ -110,7 +110,7 @@ export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { lang } = useI18n();
+  const { lang } = useI18n(); 
   let langAcronym = langToAcronym(lang);
 
   /* ---------- Estado y refs (todos los hooks al inicio) ---------- */
@@ -188,7 +188,7 @@ export default function TeamDetailPage(): JSX.Element {
         setPlayers(pls);
       } catch (err) {
         console.error(err);
-        setError("No se pudo cargar el equipo o sus jugadores.");
+        setError("The team or its players could not be loaded.");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -267,7 +267,7 @@ export default function TeamDetailPage(): JSX.Element {
         setNewsError(null);
         const apiKey = NEWSAPI_KEY?.trim();
         if (!apiKey) {
-          setNewsError("No hay API key configurada para noticias.");
+          setNewsError("No API key is configured for news.");
           setNews([]);
           return;
         }
@@ -310,7 +310,7 @@ export default function TeamDetailPage(): JSX.Element {
         setNews(filtered);
       } catch (err) {
         console.error("load news failed", err);
-        setNewsError("No se pudieron cargar noticias.");
+        setNewsError("News could not be loaded.");
         setNews([]);
       } finally {
         if (!cancelled) setNewsLoading(false);
@@ -515,12 +515,12 @@ export default function TeamDetailPage(): JSX.Element {
     try {
       const payload = { ...team, lineup: fieldSlots };
       await api.put(`/teams/${id}`, payload);
-      setSaveMessage(t("save_lineup_success") ?? "Alineación guardada correctamente.");
+      setSaveMessage(t("save_lineup_success"));
       saveLineupToStorage(id, fieldSlots);
       setTeam((prev) => (prev ? ({ ...prev, lineup: fieldSlots } as TeamWithExtras) : prev));
     } catch (err) {
       console.error("save lineup failed", err);
-      setSaveMessage(t("save_lineup_error") ?? "Error al guardar la alineación.");
+      setSaveMessage(t("save_lineup_error"));
     } finally {
       setSaving(false);
       setTimeout(() => setSaveMessage(null), 3500);
@@ -651,7 +651,7 @@ export default function TeamDetailPage(): JSX.Element {
                               >
                                 <img src={(player as any).photoPreview ?? placeholderImg} alt={player.name} className="chip-photo large" />
                                 <div className="chip-info centered">
-                                  <div className="chip-name">{player.name ?? (t("unknown_player") ?? "Unknown player")}</div>
+                                  <div className="chip-name">{player.name ?? ("Unknown player")}</div>
                                   <div className="chip-number">#{player.number}</div>
                                 </div>
                               </div>
@@ -693,7 +693,11 @@ export default function TeamDetailPage(): JSX.Element {
                           <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                           <div className="bench-info small">
                             <div className="bench-name">{p.name ?? (t("unknown_player") ?? "Unknown player")}</div>
-                            <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                            <div className="bench-pos">
+                              {(p.positions || [])
+                                .map((pos) => t(pos.toLowerCase()))
+                                .join(", ")}
+                            </div>
                           </div>
                           <div className="bench-meta"><span className="badge starter">{t("in_matchday_squad") ?? "In the matchday squad"}</span></div>
                         </div>

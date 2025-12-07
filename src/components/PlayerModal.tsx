@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import type { Player } from "../types/types";
+import { useI18n } from "../i18n/I18nProvider";
+import { langToAcronym } from "../utils/langAcronym";
 
 type Props = {
   player: Player | null;
@@ -11,6 +13,8 @@ type Props = {
 };
 
 export default function PlayerModal({ player, onClose, preferFullWiki = true }: Props) {
+  const { t, lang } = useI18n();
+  const langAcronym = langToAcronym(lang);
   const [wikiShort, setWikiShort] = useState<string | null>(null);
   const [wikiFull, setWikiFull] = useState<string | null>(null);
   const [wikiLoading, setWikiLoading] = useState(false);
@@ -29,8 +33,9 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
       setWikiFull(null);
 
       try {
+        console.log(langAcronym);
         // 1) Intentamos el endpoint REST summary (rápido y CORS-friendly)
-        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+        const summaryUrl = `https://${langAcronym}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
         try {
           const res = await axios.get(summaryUrl, { timeout: 6000 });
           if (!cancelled && res?.data?.extract) {
@@ -43,7 +48,7 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
         // 2) Si preferimos el extracto completo, pedimos via action=query (texto plano)
         if (preferFullWiki) {
           // action=query supports CORS with origin=*
-          const queryUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&format=json&titles=${encodeURIComponent(
+          const queryUrl = `https://${langAcronym}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&format=json&titles=${encodeURIComponent(
             title
           )}&origin=*`;
           try {
@@ -65,7 +70,7 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
         }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
-        if (!cancelled) setWikiError("No se pudo obtener información externa.");
+        if (!cancelled) setWikiError("No external information could be obtained.");
       } finally {
         if (!cancelled) setWikiLoading(false);
       }
@@ -94,7 +99,9 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
             <h2 style={{ margin: 0 }}>{player.name}</h2>
             {player.number !== undefined && <p style={{ margin: "6px 0 0", color: "#cfe7ff" }}>#{player.number}</p>}
             {player.positions && player.positions.length > 0 && (
-              <p style={{ margin: "6px 0 0", color: "#9fb6d8" }}>{player.positions.join(" • ")}</p>
+              <p style={{ margin: "6px 0 0", color: "#9fb6d8" }}>
+                {player.positions.map((pos) => t(pos.toLowerCase())).join(" • ")}
+              </p>
             )}
           </div>
         </div>
@@ -102,17 +109,17 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
         <div className="player-modal__body">
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <div>
-              <strong>Starter</strong>
-              <div style={{ color: "#dbefff" }}>{player.isStarter ? "Yes" : "No"}</div>
+              <strong>{t("in_matchday_squad")}</strong>
+              <div style={{ color: "#dbefff" }}>{player.isStarter ? t("yes") : t("no")}</div>
             </div>
 
             <div style={{ gridColumn: "1 / -1" }}>
             </div>
           </div>
 
-          <h3 style={{ marginTop: 12 }}>External info</h3>
+          <h3 style={{ marginTop: 12 }}>{t("external_info")}</h3>
 
-          {wikiLoading && <p>Loading external info…</p>}
+          {wikiLoading && <p>{t("loading")}</p>}
 
           {!wikiLoading && wikiFull && (
             <div style={{ whiteSpace: "pre-wrap", color: "#e6eef8", lineHeight: 1.45 }}>{wikiFull}</div>
@@ -124,7 +131,7 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
 
           {!wikiLoading && !wikiFull && !wikiShort && (
             <div style={{ color: "#9aa7b8", fontStyle: "italic" }}>
-              No external description found on Wikipedia for this exact name.
+              {t("no_external_info")}
             </div>
           )}
 

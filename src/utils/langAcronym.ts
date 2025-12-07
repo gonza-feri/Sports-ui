@@ -5,12 +5,12 @@ export function langToAcronym(langCode?: string | null): string {
   const region = parts[1];
 
   const MAP: Record<string, string> = {
-    en: "gb",
+    en: "en",
     es: "es",
-    sl: "si",
-    si: "si",
-    gb: "gb",
-    uk: "gb",
+    sl: "sl",
+    si: "sl",
+    gb: "en",
+    uk: "en",
   };
 
   if (region && MAP[region]) return MAP[region];

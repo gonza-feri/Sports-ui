@@ -68,5 +68,10 @@
   "centre_forward": "Centre Forward (CF)",
   "cf": "CF",
   "striker": "Striker (ST)",
-  "st":"ST"
+  "st":"ST",
+  "save_lineup_success": "Lineup saved correctly.",
+  "save_lineup_error": "Error saving the lineup.",
+  "yes": "Yes",
+  "no": "No",
+  "no_external_info": "No external description found on Wikipedia for this exact name. Try changing the language."
 }

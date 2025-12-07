@@ -68,5 +68,10 @@
   "centre_forward": "Delantero centro (DC)",
   "cf": "DC",
   "striker": "Delantero (DL)",
-  "st":"DL"
+  "st":"DL",
+  "save_lineup_success": "Alineación guardada correctamente.",
+  "save_lineup_error": "Error al guardar la alineación.",
+  "yes": "Sí",
+  "no": "No",
+  "no_external_info": "No se ha encontrado ninguna descripción externa en Wikipedia para este nombre exacto. Prueba a cambiar el idioma."
 }

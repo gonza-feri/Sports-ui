@@ -68,5 +68,10 @@
   "centre_forward": "Centralni napadalec (CN)",
   "cf": "CN",
   "striker": "Napadalec (N)",
-  "st":"N"
+  "st":"N",
+  "save_lineup_success": "Pravilno shranjena poravnava.",
+  "save_lineup_error": "Napaka pri shranjevanju poravnave.",
+  "yes": "Da",
+  "no": "Ne",
+  "no_external_info": "Na Wikipediji ni bilo najti zunanjega opisa za točno to ime. Poskusite spremeniti jezik."
 }
