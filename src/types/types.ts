@@ -17,13 +17,14 @@ export type PlayerForm = {
   number: number;
   positions: string[];
   photo: File | null;
-  photoPreview?: string | null;   // <-- permitir null
+  photoPreview?: string | null;
   isStarter?: boolean;
   positionSlot?: string | null;
 };
 
+
 export type Team = {
-  photo: any;
+  photo: unknown;
   id: number;
   name: string;
   logo?: string | null;           // <-- permitir null

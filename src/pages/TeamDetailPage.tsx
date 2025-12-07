@@ -154,6 +154,7 @@ export default function TeamDetailPage(): JSX.Element {
   /* ---------- Carga del equipo y jugadores desde API ---------- */
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       try {
         setLoading(true);
@@ -162,23 +163,29 @@ export default function TeamDetailPage(): JSX.Element {
           setLoading(false);
           return;
         }
-        const [teamRes, playersRes] = await Promise.all([
-          api.get(`/teams/${id}`),
-          api.get(`/players`, { params: { teamId: id } }),
-        ]);
+
+        // Obtener solo el team (incluye players embebidos)
+        const teamRes = await api.get(`/teams/${id}`);
         if (cancelled) return;
 
         const tTeam = teamRes.data as TeamWithExtras;
         setTeam(tTeam);
 
-        const plsRaw: unknown[] = Array.isArray(playersRes.data) ? playersRes.data : [];
+        // Extraer players desde el team (si existen) y normalizarlos
+        const plsRaw: unknown[] = Array.isArray((tTeam as any).players) ? (tTeam as any).players : [];
         const pls: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
+          // Normalizar id: preferir number, luego string, si no generar uno temporal
+          const rawId = (p.id as unknown) ?? undefined;
+          const normalizedId =
+            typeof rawId === "number"
+              ? (rawId as number)
+              : typeof rawId === "string"
+              ? rawId
+              : Math.random().toString(36).slice(2);
+
           return {
-            id:
-              (p.id as number) ??
-              (p.id as string) ??
-              Math.random().toString(36).slice(2),
+            id: normalizedId,
             name: typeof p.name === "string" ? p.name : "",
             number:
               typeof p.number === "number"
@@ -191,14 +198,13 @@ export default function TeamDetailPage(): JSX.Element {
               : typeof p.positions === "string"
               ? [p.positions as string]
               : [],
-            photo: typeof p.photo === "string" ? p.photo : null,
-            photoPreview:
-              typeof p.photo === "string" ? (p.photo as string) : placeholderImg,
+            photo: typeof p.photo === "string" ? (p.photo as string) : null,
+            photoPreview: typeof p.photo === "string" ? (p.photo as string) : placeholderImg,
             isStarter: Boolean(p.isStarter),
           } as Player;
         });
 
-        setPlayers(pls);
+        if (!cancelled) setPlayers(pls);
       } catch (err) {
         console.error(err);
         setError("The team or its players could not be loaded.");
@@ -206,11 +212,13 @@ export default function TeamDetailPage(): JSX.Element {
         if (!cancelled) setLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
     };
   }, [id]);
+
 
   /* ---------- Construcción de alineación inicial ---------- */
   useEffect(() => {

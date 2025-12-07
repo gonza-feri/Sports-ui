@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/pages/TeamsPage.tsx
 import { useI18n } from "../i18n/I18nProvider";
 import React, { useEffect, useRef, useState } from "react";
@@ -72,18 +74,22 @@ export default function TeamsPage() {
     };
   }, []);
 
-  async function handleDelete(teamId: number) {
-    const confirmDelete = window.confirm("Are you sure you want to delete this team?");
-    if (!confirmDelete) return;
-    try {
-      await api.delete(`/teams/${teamId}`);
-      setTeams((prev) => prev.filter((t) => t.id !== teamId));
-      setOpenMenu((prev) => (prev === teamId ? null : prev));
-    } catch (err) {
-      console.error("Error deleting team", err);
-      alert("The team could not be removed.");
-    }
+async function handleDelete(teamId: number | string) {
+  const confirmDelete = window.confirm("Are you sure you want to delete this team?");
+  if (!confirmDelete) return;
+
+  try {
+    // Solo borrar el equipo en /teams/:id (no tocar /players)
+    await api.delete(`/teams/${teamId}`);
+
+    // Actualizar UI local
+    setTeams((prev) => prev.filter((t) => t.id !== teamId));
+    setOpenMenu((prev) => (prev === teamId ? null : prev));
+  } catch (err) {
+    console.error("Error deleting team", err);
+    alert("The team could not be removed.");
   }
+}
 
   const filteredTeams = teams.filter((t) =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase())

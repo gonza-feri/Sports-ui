@@ -87,15 +87,6 @@
   flex: 1; /* ocupa todo el espacio disponible */
 }
 
-/* Footer: siempre al fondo */
-.footer {
-  background: #1e1e2f;
-  color: #fff;
-  text-align: center;
-  padding: 12px;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-
 /* Keep the layout stretch for normal flow */
 .app-wrapper {
   display: flex;

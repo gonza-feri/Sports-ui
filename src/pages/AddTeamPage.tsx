@@ -306,11 +306,11 @@ export default function AddTeamPage(): JSX.Element {
     }
     if (rows.length === 0) return [];
     const header = rows.shift()!.map((h) => h.trim().toLowerCase());
-    const idxNombre = header.indexOf("nombre");
-    const idxNumero = header.indexOf("número") >= 0 ? header.indexOf("número") : header.indexOf("numero");
-    const idxPosiciones = header.indexOf("posiciones");
-    const idxTitular = header.indexOf("titular");
-    const idxFoto = header.indexOf("foto");
+    const idxNombre = header.indexOf("name");
+    const idxNumero = header.indexOf("number") >= 0 ? header.indexOf("number") : header.indexOf("number");
+    const idxPosiciones = header.indexOf("positions");
+    const idxTitular = header.indexOf("summoned");
+    const idxFoto = header.indexOf("photo");
     return rows
       .map((cols) => {
         const get = (idx: number) => (idx >= 0 && idx < cols.length ? cols[idx].trim() : "");
@@ -341,9 +341,23 @@ export default function AddTeamPage(): JSX.Element {
     setExpandedIndex(0);
   };
 
-  const removePlayer = (idx: number) => {
-    setPlayers((prev) => prev.filter((_, i) => i !== idx));
+  const removePlayer = async (idx: number): Promise<void> => {
+    const playerToRemove = players[idx];
+    if (!playerToRemove) {
+      setExpandedIndex(null);
+      return;
+    }
+
+    // 1) Actualizar state local
+    let newPlayers: typeof players = [];
+    setPlayers((prev) => {
+      newPlayers = prev.filter((_, i) => i !== idx);
+      return newPlayers;
+    });
     setExpandedIndex(null);
+
+    // 2) Sincronizar en servidor: actualizar team.players (no tocar /players)
+    await syncPlayersToTeam(newPlayers);
   };
 
   const updatePlayerField = <K extends keyof PlayerForm>(idx: number, key: K, value: PlayerForm[K]) => {
@@ -365,8 +379,39 @@ export default function AddTeamPage(): JSX.Element {
     });
   };
 
+    // helper: id corto tipo hex
+  const generateId = (): number => {
+  return Math.floor(Date.now() % 1_000_000_000) + Math.floor(Math.random() * 900);
+};
+
+
+  // helper: sincroniza players al team (PUT /teams/:id)
+  const syncPlayersToTeam = async (newPlayers: PlayerForm[]) => {
+    if (!id) return;
+    try {
+      const teamRes = await api.get(`/teams/${id}`);
+      const currentTeam: any = teamRes.data;
+      const teamPayload = {
+        ...currentTeam,
+        players: newPlayers.map((p) => ({
+          id: Number(p.id ?? generateId()), // forzar number
+          name: p.name,
+          number: Number(p.number) || 0,
+          positions: Array.isArray(p.positions) ? p.positions : [],
+          photo: p.photoPreview ?? undefined,
+          isStarter: !!p.isStarter,
+          positionSlot: p.positionSlot ?? undefined,
+        })),
+      };
+      await api.put(`/teams/${id}`, teamPayload);
+    } catch (err) {
+      console.error("PUT /teams/:id (sync players) failed:", err);
+      setError("No se pudo sincronizar los jugadores en el servidor. Revisa la consola.");
+    }
+  };
+
   /* ---------- Save player (comprimir) ---------- */
-  const savePlayer = (idx: number) => {
+  const savePlayer = async (idx: number) => {
     const p = players[idx];
     if (!p) return;
     if (!p.name || p.name.trim() === "") {
@@ -375,6 +420,28 @@ export default function AddTeamPage(): JSX.Element {
     }
     setError(null);
     setExpandedIndex(null);
+
+    // Construir copia tipada explícitamente
+    const copy: PlayerForm[] = players.map((pl, i) =>
+      i === idx
+        ? {
+            ...pl,
+            id: pl.id ?? generateId(), // ahora id es number
+            name: pl.name.trim(),
+            number: Number(pl.number) || 0,
+            positions: Array.isArray(pl.positions) ? pl.positions : [],
+            photo: pl.photo ?? null,
+            photoPreview: pl.photoPreview ?? null,
+            isStarter: !!pl.isStarter,
+            positionSlot: pl.positionSlot ?? null,
+          }
+        : pl
+    );
+
+    // Actualizar state y sincronizar
+    setPlayers(copy);
+    // sincronizar en background (o await si prefieres bloquear)
+    syncPlayersToTeam(copy);
   };
 
   /* ---------- Import CSV (robusto) ---------- */
@@ -435,9 +502,8 @@ export default function AddTeamPage(): JSX.Element {
           // default: return underscored (may be a canonical key)
           return underscored;
         });
-
         imported.push({
-          id: undefined,
+          id: generateId(), // number
           name: row.nombre || "",
           number: parseInt(row.numero) || 0,
           positions: normalizedPositions,
@@ -459,7 +525,7 @@ export default function AddTeamPage(): JSX.Element {
 
   /* ---------- Export CSV ---------- */
   const handleExportCSV = () => {
-    const header = "nombre;número;posiciones;titular;foto";
+    const header = "name;number;positions;summoned;photo";
     const lines = players.map((p) => {
       const nombre = (p.name ?? "").replace(/"/g, '""');
       const numero = String(p.number ?? 0);
@@ -473,7 +539,7 @@ export default function AddTeamPage(): JSX.Element {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "jugadores.csv";
+    a.download = "players.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -486,11 +552,13 @@ export default function AddTeamPage(): JSX.Element {
     setError(null);
     try {
       setLoading(true);
+
+      // Validar duplicados
       try {
         const allTeamsRes = await api.get("/teams");
         const allTeams: Team[] = allTeamsRes.data || [];
         const currentName = teamName.trim().toLowerCase();
-        const isDuplicate = allTeams.some((t) => t.name?.trim().toLowerCase() === currentName && String(t.id) !== String(id));
+        const isDuplicate = allTeams.some(t => t.name?.trim().toLowerCase() === currentName && String(t.id) !== String(id));
         if (isDuplicate) {
           setError("Ya existe un equipo con ese nombre. Elige otro nombre único.");
           setLoading(false);
@@ -500,36 +568,21 @@ export default function AddTeamPage(): JSX.Element {
         console.warn("No se pudo validar nombres duplicados:", checkErr);
       }
 
+      // payload base del equipo
       const teamPayload: Partial<Team> = {
         name: teamName.trim(),
         description: teamDescription.trim(),
         logo: teamLogoPreview ?? undefined,
       };
 
+      // Crear o actualizar equipo (sin players aún)
       let savedTeam: Team | null = null;
-
       if (id) {
-        try {
-          const res = await api.put(`/teams/${id}`, { ...teamPayload });
-          savedTeam = res.data;
-        } catch (putErr: any) {
-          console.error("PUT /teams failed:", putErr);
-          const detail = putErr?.response?.data ?? putErr?.response?.statusText ?? putErr?.message ?? String(putErr);
-          setError(`No se pudo actualizar el equipo. ${detail}`);
-          setLoading(false);
-          return;
-        }
+        const res = await api.put(`/teams/${id}`, { ...teamPayload });
+        savedTeam = res.data;
       } else {
-        try {
-          const res = await api.post(`/teams`, teamPayload);
-          savedTeam = res.data;
-        } catch (postErr: any) {
-          console.error("POST /teams failed:", postErr);
-          const detail = postErr?.response?.data ?? postErr?.response?.statusText ?? postErr?.message ?? String(postErr);
-          setError(`No se pudo crear el equipo. ${detail}`);
-          setLoading(false);
-          return;
-        }
+        const res = await api.post(`/teams`, teamPayload);
+        savedTeam = res.data;
       }
 
       if (!savedTeam || savedTeam.id === undefined || savedTeam.id === null) {
@@ -538,55 +591,25 @@ export default function AddTeamPage(): JSX.Element {
         return;
       }
 
-      const persistedPlayers: Player[] = [];
-      const playerErrors: string[] = [];
+      // Construir players desde el state y persistirlos dentro del team
+      const persistedPlayers = players.map(p => ({
+        id: p.id,
+        name: p.name.trim(),
+        number: Number(p.number) || 0,
+        positions: p.positions,
+        photo: p.photoPreview ?? undefined,
+        isStarter: !!p.isStarter,
+        positionSlot: p.positionSlot ?? undefined,
+      }));
 
-      for (const p of players) {
-        const payload = {
-          name: p.name.trim(),
-          number: Number(p.number) || 0,
-          positions: p.positions, // acronyms
-          photo: p.photoPreview ?? undefined,
-          teamId: savedTeam.id,
-          isStarter: !!p.isStarter,
-          positionSlot: p.positionSlot ?? undefined,
-        };
-        if (p.id) {
-          try {
-            const res = await api.put(`/players/${p.id}`, { id: p.id, ...payload });
-            persistedPlayers.push(res.data);
-          } catch (err: any) {
-            console.error(`PUT /players/${p.id} failed:`, err);
-            playerErrors.push(`Jugador ${p.name || p.id}: ${err?.message ?? "error"}`);
-          }
-        } else {
-          try {
-            const res = await api.post(`/players`, payload);
-            persistedPlayers.push(res.data);
-          } catch (err: any) {
-            console.error("POST /players failed:", err);
-            playerErrors.push(`Jugador ${p.name || "nuevo"}: ${err?.message ?? "error"}`);
-          }
-        }
-      }
+      // Actualizar team con players embebidos
+      await api.put(`/teams/${savedTeam.id}`, { ...savedTeam, players: persistedPlayers });
 
-      try {
-        await api.put(`/teams/${savedTeam.id}`, { ...savedTeam, players: persistedPlayers });
-      } catch (err) {
-        console.warn("PUT /teams (attach players) failed:", err);
-      }
-
-      if (playerErrors.length) {
-        setError(`Equipo guardado, pero hubo errores guardando jugadores: ${playerErrors.join("; ")}`);
-      } else {
-        setError(null);
-      }
-
+      setError(null);
       navigate(`/teams/${savedTeam.id}`);
     } catch (err) {
       console.error("save team failed", err);
-      const detail = (err as any)?.message ?? String(err);
-      setError(`No se pudo guardar el equipo. ${detail}`);
+      setError(`No se pudo guardar el equipo. ${(err as any)?.message ?? String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -604,47 +627,17 @@ export default function AddTeamPage(): JSX.Element {
           setTeamDescription(tteam.description ?? "");
           setTeamLogoPreview(tteam.logo ?? null);
 
-          let rawPlayers: Player[] = Array.isArray((tteam as any).players) ? (tteam as any).players : [];
-          if (!rawPlayers.length) {
-            try {
-              const playersRes = await api.get("/players", { params: { teamId: id } });
-              rawPlayers = Array.isArray(playersRes.data) ? playersRes.data : [];
-            } catch (err) {
-              console.warn("No se pudieron cargar jugadores por teamId:", err);
-            }
-          }
-
-          // Normalize positions to acronyms on load
-          const mapped: PlayerForm[] = rawPlayers.map((p: Player) => {
-            const rawPositions = Array.isArray(p.positions) ? p.positions : typeof p.positions === "string" ? [p.positions] : [];
-            const normalizedPositions = rawPositions.map((pos) => {
-              const lower = String(pos).trim().toLowerCase();
-              const fromMap = DISPLAY_TO_ACRONYM[lower];
-              if (fromMap) return fromMap;
-              // try underscore/hyphen variants
-              const underscored = lower.replace(/\s+/g, "_");
-              const hyphened = lower.replace(/\s+/g, "-");
-              if (DISPLAY_TO_ACRONYM[underscored]) return DISPLAY_TO_ACRONYM[underscored];
-              if (DISPLAY_TO_ACRONYM[hyphened]) return DISPLAY_TO_ACRONYM[hyphened];
-              // if it's already an acronym-like string, keep it
-              if (/^[a-z]{1,3}$/.test(lower)) return lower;
-              // fallback heuristics
-              if (lower.includes("goal")) return "gk";
-              if (lower.includes("right")) return "rb";
-              if (lower.includes("left")) return "lb";
-              return underscored;
-            });
-            return {
-              id: p.id,
-              name: p.name ?? "",
-              number: p.number ?? 0,
-              positions: normalizedPositions,
-              photo: null,
-              photoPreview: p.photo ?? null,
-              isStarter: !!p.isStarter,
-              positionSlot: (p as any).positionSlot ?? null,
-            };
-          });
+          const rawPlayers: Player[] = Array.isArray((tteam as any).players) ? (tteam as any).players : [];
+          const mapped: PlayerForm[] = rawPlayers.map((p: Player) => ({
+            id: p.id,
+            name: p.name ?? "",
+            number: p.number ?? 0,
+            positions: Array.isArray(p.positions) ? p.positions : (p.positions ? [String(p.positions)] : []),
+            photo: null,
+            photoPreview: p.photo ?? null,
+            isStarter: !!p.isStarter,
+            positionSlot: (p as any).positionSlot ?? null,
+          }));
           setPlayers(mapped);
         } else {
           setTeamName("");

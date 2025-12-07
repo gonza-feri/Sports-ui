@@ -17,9 +17,25 @@ const FLAG_SVG: Record<LangCode, string> = {
         <rect y="10" width="60" height="20" fill="#ffcc00"/>
       </svg>`,
   sl: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40">
-        <rect width="60" height="40" fill="#fff"/>
-        <rect y="13" width="60" height="14" fill="#0057b8"/>
-        <rect y="27" width="60" height="13" fill="#d52b1e"/>
+        <!-- franjas -->
+        <rect width="60" height="13.333" y="0" fill="#fff"/>
+        <rect width="60" height="13.333" y="13.333" fill="#0057b8"/>
+        <rect width="60" height="13.334" y="26.666" fill="#d52b1e"/>
+        <!-- escudo simplificado en el cantón -->
+        <g transform="translate(6,6)">
+          <!-- escudo fondo -->
+          <path d="M0 0 h12 a6 6 0 0 1 6 6 v8 a6 6 0 0 1 -6 6 h-12 z" fill="#003f87" stroke="#000" stroke-width="0.3"/>
+          <!-- Monte Triglav (estilizado) -->
+          <path d="M2.2 12 L6 5 L9.8 12 L8.6 12 L6 8.6 L3.4 12 Z" fill="#fff"/>
+          <!-- ondas (ríos) -->
+          <path d="M2 16 q2 -1 4 0 t4 0" stroke="#fff" stroke-width="0.9" fill="none" stroke-linecap="round"/>
+          <!-- tres estrellas (amarillas) -->
+          <g fill="#ffd24d">
+            <polygon points="6 1.2 6.6 2.6 8.1 2.6 6.9 3.6 7.4 5 6 4 4.6 5 5.1 3.6 3.9 2.6 5.4 2.6"/>
+            <polygon points="3 2.2 3.6 3.6 5.1 3.6 3.9 4.6 4.4 6 3 5 1.6 6 2.1 4.6 0.9 3.6 2.4 3.6"/>
+            <polygon points="9 2.2 9.6 3.6 11.1 3.6 9.9 4.6 10.4 6 9 5 7.6 6 8.1 4.6 6.9 3.6 8.4 3.6"/>
+          </g>
+        </g>
       </svg>`,
 };
 
