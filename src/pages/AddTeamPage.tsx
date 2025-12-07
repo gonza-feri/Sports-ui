@@ -691,6 +691,12 @@ export default function AddTeamPage(): JSX.Element {
 
         <div className="form-top-actions" role="toolbar" aria-label="Form actions">
           <div className="form-top-left">
+            <button type="button" className="btn btn-back" onClick={() => navigate(id ? `/teams/${id}` : "/teams")}>
+              {t("back")}
+            </button>
+          </div>
+
+          <div className="form-top-right">
             <button
               type="button"
               className="btn btn-save"
@@ -701,12 +707,6 @@ export default function AddTeamPage(): JSX.Element {
               }}
             >
               {t("save_team")}
-            </button>
-          </div>
-
-          <div className="form-top-right">
-            <button type="button" className="btn btn-back" onClick={() => navigate(id ? `/teams/${id}` : "/teams")}>
-              {t("back")}
             </button>
           </div>
         </div>

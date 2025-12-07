@@ -560,6 +560,9 @@ export default function TeamDetailPage(): JSX.Element {
           </div>
         ) : (
           <>
+            <div className="team-header-actions">
+              <button className="btn btn-back" onClick={() => navigate("/teams")}>{t("back")}</button>
+            </div>
             {playerCount < 11 ? <Warning /> : <Info />}
 
             <header className="team-header">
@@ -598,10 +601,6 @@ export default function TeamDetailPage(): JSX.Element {
                   {t("edit_team")}
                 </button>
                 {saveMessage && <div className="save-message" role="status">{saveMessage}</div>}
-              </div>
-
-              <div className="team-header-actions">
-                <button className="btn btn-back" onClick={() => navigate("/teams")}>{t("back")}</button>
               </div>
             </header>
 
@@ -719,7 +718,11 @@ export default function TeamDetailPage(): JSX.Element {
                           <img src={(p as any).photoPreview ?? placeholderImg} alt={p.name} className="bench-photo" />
                           <div className="bench-info small">
                             <div className="bench-name">{p.name ?? (t("unknown_player") ?? "Unknown player")}</div>
-                            <div className="bench-pos">{(p.positions || []).join(", ")}</div>
+                            <div className="bench-pos">
+                              {(p.positions || [])
+                                .map((pos) => t(pos.toLowerCase()))
+                                .join(", ")}
+                            </div>
                           </div>
                           <div className="bench-meta"><span className="badge">{t("not_in_matchday") ?? "Not in the Matchday Squad"}</span></div>
                         </div>

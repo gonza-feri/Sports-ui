@@ -12,6 +12,7 @@ export default function AddTeamForm({ onTeamAdded, onCancel }: AddTeamFormProps)
     name: "",
     description: "",
     logo: "",
+    photo: "",
     players: [],
   });
 
@@ -52,7 +53,7 @@ export default function AddTeamForm({ onTeamAdded, onCancel }: AddTeamFormProps)
         type="text"
         name="logo"
         placeholder="Logo URL"
-        value={team.logo}
+        value={team.logo || ""}
         onChange={handleChange}
       />
 
