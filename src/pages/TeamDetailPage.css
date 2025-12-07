@@ -355,3 +355,72 @@
 .player-modal__body h3 { margin-top:12px; margin-bottom:6px; color:#cfe7ff; }
 .player-modal__wiki { color:#dbefff; }
 .player-modal__wiki--empty { color:#9aa7b8; font-style:italic; }
+
+/* Barra sticky con fondo negro */
+.team-header-actions.sticky-header {
+  position: sticky;
+  top: 69px; /* se sitúa justo debajo del menú fijo */
+  left: 0;
+  right: 0;
+  z-index: 1100;               /* por debajo de menús/modales que tengan z-index mayor */
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: #000;            /* fondo negro */
+  color: #fff;                 /* texto blanco */
+  -webkit-font-smoothing: antialiased;
+  backdrop-filter: none;       /* desactiva blur si no lo quieres */
+  box-shadow: 0 1px 6px rgba(0,0,0,0.25);
+}
+
+/* Asegura que los botones dentro sean visibles en fondo negro */
+.team-header-actions.sticky-header .btn,
+.team-header-actions.sticky-header button {
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Si el menú superior es fijo y tiene altura, evita que el sticky lo tape
+   Añade padding-top al wrapper para compensar la altura del sticky + separación */
+.page-wrapper.team-page {
+  padding-top: calc(var(--menu-height) + 56px); /* ajusta 56px si tu sticky es más alto o más bajo */
+}
+
+/* Ajustes responsivos: reduce padding en pantallas pequeñas */
+@media (max-width: 640px) {
+  .team-header-actions.sticky-header {
+    padding: 8px 10px;
+  }
+  .page-wrapper.team-page {
+    padding-top: calc(var(--menu-height) + 48px);
+  }
+}
+
+/* Restaurar estilo rojo para el botón "back" dentro del sticky header */
+.team-header-actions.sticky-header .btn.btn-back,
+.team-header-actions.sticky-header button.btn-back {
+  background: #c62828;        /* rojo */
+  color: #fff;                /* texto blanco */
+  border: 1px solid rgba(0,0,0,0.12);
+  box-shadow: 0 2px 6px rgba(198,40,40,0.12);
+}
+
+/* Estados hover / active / focus */
+.team-header-actions.sticky-header .btn.btn-back:hover,
+.team-header-actions.sticky-header button.btn-back:hover {
+  background: #b71c1c;
+  transform: translateY(-1px);
+}
+
+.team-header-actions.sticky-header .btn.btn-back:active,
+.team-header-actions.sticky-header button.btn-back:active {
+  background: #9a1414;
+  transform: translateY(0);
+}
+
+.team-header-actions.sticky-header .btn.btn-back:focus {
+  outline: 2px solid rgba(255,255,255,0.12);
+  outline-offset: 2px;
+}
+
