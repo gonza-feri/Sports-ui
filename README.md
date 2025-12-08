@@ -1,40 +1,28 @@
-# DreamLeague / Sports UI
+# DreamLeague — Sports Team Manager
 
-Interfaz web para gestionar equipos y jugadores de fútbol, con noticias integradas y un backend simulado REST (json-server). Este README recoge el estado actual del proyecto y enlaza al repositorio donde se puede seguir el historial de cambios y el progreso completo.
+**Repository**: https://github.com/gonza-feri/DreamLeague
 
-> Repositorio con historial y progreso: https://github.com/gonza-feri/DreamLeague
+## Overview
+DreamLeague is a **React + TypeScript** web application to manage football teams and players, build matchday lineups with drag‑and‑drop, and surface related news. During development the project uses a lightweight REST backend (json‑server). Players are persisted as an embedded array inside each team record so lineup and player data remain in sync.
 
-## Resumen
-DreamLeague es una aplicación **React + TypeScript** para crear, editar y gestionar equipos y jugadores, montar alineaciones (drag & drop), y mostrar noticias relacionadas con cada equipo. El backend se simula con **json-server** para facilitar el desarrollo y la entrega.
+## Features
+- **Team Management**: create, view, edit, and delete teams.  
+- **Player Management**: add and edit players, set positions, numbers, photos, and mark matchday starters.  
+- **Lineup Editor**: visual pitch with drag‑and‑drop to place players; lineup is persisted with the team.  
+- **News Integration**: fetch recent articles related to a team (configurable API key).  
+- **CSV Import**: import players from CSV files; multi‑position players supported via delimited fields.  
+- **Local Cache**: lineup edits are cached in `localStorage` while editing for quick recovery.  
+- **Single Source of Truth**: players are stored inside `team.players` and updated via `PUT /teams/:id`.
 
-(Este README parte del contenido original del proyecto y se ha actualizado para reflejar el estado actual).
+## Tech Stack
+- **React** with **TypeScript**  
+- **Axios** for HTTP requests  
+- **React Router** for navigation  
+- **json-server** for a simulated REST backend during development  
+- Plain CSS for styling (project stylesheets included)
 
-## Características principales
-- **Gestión de equipos**: ver, crear, editar y eliminar equipos.  
-- **Gestión de jugadores**: añadir jugadores, asignarlos a equipos, editar posiciones y fotos.  
-- **Alineaciones**: arrastrar y soltar jugadores en el campo; persistencia de la alineación en el equipo.  
-- **Noticias por equipo**: integración con API de noticias para mostrar artículos relevantes.  
-- **Búsqueda y filtros**: búsqueda de equipos y jugadores.  
-- **Simulación de API**: json-server para endpoints REST durante desarrollo.
-
-## Tech stack
-- **React + TypeScript**  
-- **Axios** para llamadas HTTP  
-- **React Router** para navegación  
-- **json-server** para simular backend REST  
-- **CSS** (estilos del proyecto)
-
-## Endpoints (json-server)
-- `GET /teams` — listar equipos  
-- `GET /teams/:id` — obtener equipo (incluye `players` embebidos)  
-- `POST /teams` — crear equipo  
-- `PUT /teams/:id` — actualizar equipo (se usa para persistir `players` y `lineup`)  
-- `DELETE /teams/:id` — eliminar equipo
-
-> Nota: el proyecto actualiza y persiste el array `team.players` dentro de `PUT /teams/:id` en lugar de operar sobre un endpoint `/players` separado.
-
-## Instalación y ejecución (desarrollo)
-1. Clona el repositorio:
+## Installation and Run
+1. Clone the repository:
 ```bash
 git clone https://github.com/gonza-feri/DreamLeague.git
 cd DreamLeague
