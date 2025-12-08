@@ -155,37 +155,45 @@ export default function TeamDetailPage(): JSX.Element {
   useEffect(() => {
     let cancelled = false;
 
+    // Generador de id numérico negativo único para ids temporales (no colisiona con ids positivos del backend)
+    let tempIdCounter = -1;
+    const genTempId = () => tempIdCounter--;
+
     async function load() {
       try {
         setLoading(true);
+        setError(null);
+
         if (!id) {
           setError("Team id missing");
           setLoading(false);
           return;
         }
 
-        // Obtener solo el team (incluye players embebidos)
         const teamRes = await api.get(`/teams/${id}`);
         if (cancelled) return;
 
         const tTeam = teamRes.data as TeamWithExtras;
         setTeam(tTeam);
 
-        // Extraer players desde el team (si existen) y normalizarlos
         const plsRaw: unknown[] = Array.isArray((tTeam as any).players) ? (tTeam as any).players : [];
-        const pls: Player[] = plsRaw.map((pRaw) => {
+
+        const normalized: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
-          // Normalizar id: preferir number, luego string, si no generar uno temporal
-          const rawId = (p.id as unknown) ?? undefined;
-          const normalizedId =
-            typeof rawId === "number"
-              ? (rawId as number)
-              : typeof rawId === "string"
-              ? rawId
-              : Math.random().toString(36).slice(2);
+
+          // Normalizar id a number cuando sea posible; si no, generar id numérico temporal negativo
+          const rawId = p.id as unknown;
+          let idNum: number;
+          if (typeof rawId === "number") {
+            idNum = rawId;
+          } else if (typeof rawId === "string" && rawId.trim() !== "" && !Number.isNaN(Number(rawId))) {
+            idNum = Number(rawId);
+          } else {
+            idNum = genTempId();
+          }
 
           return {
-            id: normalizedId,
+            id: idNum,
             name: typeof p.name === "string" ? p.name : "",
             number:
               typeof p.number === "number"
@@ -201,10 +209,22 @@ export default function TeamDetailPage(): JSX.Element {
             photo: typeof p.photo === "string" ? (p.photo as string) : null,
             photoPreview: typeof p.photo === "string" ? (p.photo as string) : placeholderImg,
             isStarter: Boolean(p.isStarter),
+            positionSlot: (p as any).positionSlot ?? null,
           } as Player;
         });
 
-        if (!cancelled) setPlayers(pls);
+        // Asegurar unicidad de ids numéricos (si hubiera duplicados por datos sucios)
+        const seen = new Set<number>();
+        const uniquePlayers = normalized.map((pl) => {
+          let pid = pl.id;
+          if (seen.has(pid)) {
+            pid = genTempId();
+          }
+          seen.add(pid);
+          return { ...pl, id: pid };
+        });
+
+        if (!cancelled) setPlayers(uniquePlayers);
       } catch (err) {
         console.error(err);
         setError("The team or its players could not be loaded.");

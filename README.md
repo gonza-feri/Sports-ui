@@ -1,42 +1,40 @@
-# Sports UI
+# DreamLeague / Sports UI
 
-A React application for managing football teams and players, with integrated news and a REST API backend simulation.
+Interfaz web para gestionar equipos y jugadores de fútbol, con noticias integradas y un backend simulado REST (json-server). Este README recoge el estado actual del proyecto y enlaza al repositorio donde se puede seguir el historial de cambios y el progreso completo.
 
-## Features
+> Repositorio con historial y progreso: https://github.com/gonza-feri/DreamLeague
 
-- ⚽ Manage teams: view, add, edit, delete
-- 👥 Manage players: assign to teams, update positions
-- 📰 Latest football news displayed per team
-- 🔍 Team search functionality
-- 🎨 Modern UI with responsive design
-- 🔗 REST API integration using Axios
+## Resumen
+DreamLeague es una aplicación **React + TypeScript** para crear, editar y gestionar equipos y jugadores, montar alineaciones (drag & drop), y mostrar noticias relacionadas con cada equipo. El backend se simula con **json-server** para facilitar el desarrollo y la entrega.
 
-## Tech Stack
+(Este README parte del contenido original del proyecto y se ha actualizado para reflejar el estado actual).
 
-- **React + TypeScript**
-- **Axios** for API communication
-- **json-server** for simulating a REST API backend
-- **React Router** for navigation
-- **CSS Modules** for styling
+## Características principales
+- **Gestión de equipos**: ver, crear, editar y eliminar equipos.  
+- **Gestión de jugadores**: añadir jugadores, asignarlos a equipos, editar posiciones y fotos.  
+- **Alineaciones**: arrastrar y soltar jugadores en el campo; persistencia de la alineación en el equipo.  
+- **Noticias por equipo**: integración con API de noticias para mostrar artículos relevantes.  
+- **Búsqueda y filtros**: búsqueda de equipos y jugadores.  
+- **Simulación de API**: json-server para endpoints REST durante desarrollo.
 
-## REST API Simulation
+## Tech stack
+- **React + TypeScript**  
+- **Axios** para llamadas HTTP  
+- **React Router** para navegación  
+- **json-server** para simular backend REST  
+- **CSS** (estilos del proyecto)
 
-The backend is simulated using `json-server`.  
-Endpoints available:
+## Endpoints (json-server)
+- `GET /teams` — listar equipos  
+- `GET /teams/:id` — obtener equipo (incluye `players` embebidos)  
+- `POST /teams` — crear equipo  
+- `PUT /teams/:id` — actualizar equipo (se usa para persistir `players` y `lineup`)  
+- `DELETE /teams/:id` — eliminar equipo
 
-- `GET /teams` → list all teams
-- `GET /teams/:id` → get a single team
-- `POST /teams` → add a new team
-- `PUT /teams/:id` → update a team
-- `DELETE /teams/:id` → delete a team
-- `GET /players` → list all players
-- `POST /players` → add a new player
-- `PUT /players/:id` → update a player
-- `DELETE /players/:id` → delete a player
+> Nota: el proyecto actualiza y persiste el array `team.players` dentro de `PUT /teams/:id` en lugar de operar sobre un endpoint `/players` separado.
 
-## Getting Started
-
-### 1. Clone the repository
+## Instalación y ejecución (desarrollo)
+1. Clona el repositorio:
 ```bash
-git clone https://github.com/gonza-feri/Sports-ui.git
-cd Sports-ui
+git clone https://github.com/gonza-feri/DreamLeague.git
+cd DreamLeague
