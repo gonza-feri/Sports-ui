@@ -1,12 +1,10 @@
 // src/components/PlayerCard.tsx
-import React from "react";
-
 type Player = {
   id: number | string;
   name: string;
   number?: number;
   photo?: string;
-  positions?: string[]; // ajusta según tu shape
+  positions?: string[]; 
   teamId?: number | string;
 };
 

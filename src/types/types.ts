@@ -5,9 +5,9 @@ export type Player = {
   name: string;
   number: number;
   positions: string[];
-  photo?: string;           // data URL o URL persistente
+  photo?: string;
   teamId?: number;
-  isStarter?: boolean;      // si es titular
+  isStarter?: boolean;
   positionSlot?: string | null;
 };
 
@@ -27,7 +27,7 @@ export type Team = {
   photo: unknown;
   id: number;
   name: string;
-  logo?: string | null;           // <-- permitir null
+  logo?: string | null;
   description?: string;
   players?: Player[];
   formation?: string;

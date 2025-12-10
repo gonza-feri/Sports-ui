@@ -27,6 +27,9 @@ export default function TeamsPage() {
 
   const wrapperRef = useRef<HTMLElement | null>(null);
 
+  /**
+   * Load the equipment when setting up the page
+   */
   useEffect(() => {
     let cancelled = false;
     async function loadTeams() {
@@ -35,8 +38,8 @@ export default function TeamsPage() {
         const res = await api.get("/teams");
         if (!cancelled) setTeams(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Error loading teams", err);
-        setError("The teams could not be loaded.");
+        console.error(t("error_loaging_teams"), err);
+        setError(t("teams_could_not_be_loaded"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -47,7 +50,10 @@ export default function TeamsPage() {
     };
   }, []);
 
-  // cerrar menú al click fuera o Escape
+  /**
+   * Listen for clicks throughout the document and the Escape key. 
+   * If the click occurs outside the menu or the user presses Escape, close the equipment drop-down menu.
+   */
   useEffect(() => {
     function onDocMouseDown(e: MouseEvent) {
       const target = e.target as HTMLElement;
@@ -74,23 +80,31 @@ export default function TeamsPage() {
     };
   }, []);
 
-async function handleDelete(teamId: number | string) {
-  const confirmDelete = window.confirm("Are you sure you want to delete this team?");
-  if (!confirmDelete) return;
+/**
+ * Remove a team
+ * @param teamId
+ */
+  async function handleDelete(teamId: number | string) {
+    const confirmDelete = window.confirm(t("sure_deleting_team"));
+    if (!confirmDelete) return;
 
-  try {
-    // Solo borrar el equipo en /teams/:id (no tocar /players)
-    await api.delete(`/teams/${teamId}`);
+    try {
+      // Backend delete
+      await api.delete(`/teams/${teamId}`);
 
-    // Actualizar UI local
-    setTeams((prev) => prev.filter((t) => t.id !== teamId));
-    setOpenMenu((prev) => (prev === teamId ? null : prev));
-  } catch (err) {
-    console.error("Error deleting team", err);
-    alert("The team could not be removed.");
+      // Actualice local UI
+      setTeams((prev) => prev.filter((t) => t.id !== teamId));
+      setOpenMenu((prev) => (prev === teamId ? null : prev));
+    } catch (err) {
+      console.error(t("error_deleting_team"), err);
+      alert(t("team_could_not_be_removed"));
+    }
   }
-}
 
+  /**
+   * Internal logic backend of the search bar frontend by team. 
+   * Find the team with that character string included in its name.
+   */
   const filteredTeams = teams.filter((t) =>
     t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -101,7 +115,6 @@ async function handleDelete(teamId: number | string) {
       <section className="page-wrapper" ref={wrapperRef}>
         <h2>{t("teams")}</h2>
 
-        {/* Buscador */}
         <div className="team-search">
           <input
             type="text"

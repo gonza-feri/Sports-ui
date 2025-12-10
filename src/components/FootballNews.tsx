@@ -1,5 +1,5 @@
 // src/components/FootballNews.tsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./FootballNews.css";
 import { useI18n } from "../i18n/I18nProvider";
 import { langToAcronym } from "../utils/langAcronym";
@@ -23,6 +23,7 @@ export default function FootballNews() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // I don't encrypt the key because I always use free APIs, so I don't mind if people use it.
   const NEWSAPI_KEY = "6866d2f9cd2b482da43ecda2e5fdf898"; 
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export default function FootballNews() {
         setError(null);
 
         if (!NEWSAPI_KEY) {
-          setError("No API key is configured for news.");
+          setError(t("no_api_key_configured"));
           setArticles([]);
           return;
         }
@@ -43,16 +44,16 @@ export default function FootballNews() {
 
         const url = `https://newsapi.org/v2/everything?q=fútbol&language=${langAcronym}&sortBy=publishedAt&pageSize=12&apiKey=${NEWSAPI_KEY}`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
+        if (!res.ok) throw new Error(`${t("news_fetch_fail")} ${res.status} ${res.statusText}`);
         const data = await res.json();
         if (cancelled) return;
 
         const items: NewsArticle[] = Array.isArray(data.articles) ? data.articles : [];
         setArticles(items);
       } catch (err) {
-        console.error("load news failed", err);
+        console.error(t("load_news_fail"), err);
         if (!cancelled) {
-          setError("News could not be loaded.");
+          setError(t("news_not_load"));
           setArticles([]);
         }
       } finally {
@@ -71,7 +72,7 @@ export default function FootballNews() {
       {loading && <p>{t("loading")}</p>}
       {error && <p className="news-error">{error}</p>}
       {!loading && !error && articles.length === 0 && (
-        <p>No se han encontrado noticias recientes.</p>
+        <p>{t("no_recent_news")}</p>
       )}
 
       {!loading && !error && articles.length > 0 && (

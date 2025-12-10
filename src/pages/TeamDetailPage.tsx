@@ -45,9 +45,16 @@ const DEFAULT_SLOTS_TEMPLATE: LineupSlot[] = [
   { slotId: "FWD-3", positionHint: "FWD", left: "78%", top: "22%" },
 ];
 
+// Unique key to save the lineup in localStorage per team.
 const LINEUP_STORAGE_KEY = (teamId: string | number) => `team_lineup_${teamId}`;
 
-/* ---------- Helpers de almacenamiento ---------- */
+/* ---------- Storage Helpers ---------- */
+
+/**
+ * Save the lineup in localStorage
+ * @param teamId
+ * @param lineup 
+ */
 function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
   try {
     localStorage.setItem(LINEUP_STORAGE_KEY(teamId), JSON.stringify(lineup));
@@ -56,6 +63,11 @@ function saveLineupToStorage(teamId: string | number, lineup: LineupSlot[]) {
   }
 }
 
+/**
+ * Retrieves the saved alignment from localStorage. If it does not exist, returns null.
+ * @param teamId 
+ * @returns 
+ */
 function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
   try {
     const raw = localStorage.getItem(LINEUP_STORAGE_KEY(teamId));
@@ -65,6 +77,10 @@ function loadLineupFromStorage(teamId: string | number): LineupSlot[] | null {
   }
 }
 
+/**
+ * Deletes the saved lineup of a team from localStorage.
+ * @param teamId 
+ */
 function clearLineupStorage(teamId: string | number) {
   try {
     localStorage.removeItem(LINEUP_STORAGE_KEY(teamId));
@@ -73,7 +89,15 @@ function clearLineupStorage(teamId: string | number) {
   }
 }
 
-/* ---------- Matching de posiciones ---------- */
+/* ---------- Position matching ---------- */
+
+/**
+ * Check if the player's position matches the slot hint. It is a flexible matcher, 
+ * allows a player with different abbreviations to fit into the correct slot.
+ * @param pos Player's actual position (e.g., “CB,” “GK,” “ST”).
+ * @param hint Suggested slot position (e.g., “DEF,” “MID”)
+ * @returns 
+ */
 function posMatchesHint(pos: string, hint: string) {
   const p = String(pos || "").toLowerCase();
   const h = String(hint || "").toLowerCase();
@@ -84,7 +108,16 @@ function posMatchesHint(pos: string, hint: string) {
   return p.includes(h);
 }
 
-/* ---------- Construye alineación inicial SOLO con titulares ---------- */
+/* ---------- Build starting lineup ONLY with sumonned players ---------- */
+
+/**
+ * Search the roster for a player whose position matches the positionHint of the slot.
+ * If found, assign it and remove it from the available list. If any slots are empty 
+ * but there are still players available on the roster, place them even if they do not exactly match the position.
+ * @param slotsTemplate 
+ * @param players 
+ * @returns 
+ */
 function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
   const starters = players.filter((p) => p.isStarter);
   const lineup: LineupSlot[] = slotsTemplate.map((s) => ({
@@ -111,7 +144,7 @@ function buildInitialLineup(slotsTemplate: LineupSlot[], players: Player[]) {
   return lineup;
 }
 
-/* ---------- Componente ---------- */
+/* ---------- Component ---------- */
 export default function TeamDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -138,6 +171,9 @@ export default function TeamDetailPage(): JSX.Element {
   const [preventAutoFill, setPreventAutoFill] = useState<boolean>(false);
   const preventAutoFillRef = useRef<boolean>(preventAutoFill);
 
+  /**
+   * Each time preventAutoFill changes, the reference is updated.
+   */
   useEffect(() => {
     preventAutoFillRef.current = preventAutoFill;
   }, [preventAutoFill]);
@@ -151,11 +187,11 @@ export default function TeamDetailPage(): JSX.Element {
   const placeholderImg =
     "https://images.unsplash.com/photo-1521417532886-55d2f88f0a52?q=80&w=1200&auto=format&fit=crop";
 
-  /* ---------- Carga del equipo y jugadores desde API ---------- */
+  /* ---------- Loading the team and players from API ---------- */
   useEffect(() => {
     let cancelled = false;
 
-    // Generador de id numérico negativo único para ids temporales (no colisiona con ids positivos del backend)
+    // Unique negative numeric ID generator for temporary IDs (does not collide with positive IDs from the backend)
     let tempIdCounter = -1;
     const genTempId = () => tempIdCounter--;
 
@@ -165,7 +201,7 @@ export default function TeamDetailPage(): JSX.Element {
         setError(null);
 
         if (!id) {
-          setError("Team id missing");
+          setError(t("team_id_missing"));
           setLoading(false);
           return;
         }
@@ -181,7 +217,7 @@ export default function TeamDetailPage(): JSX.Element {
         const normalized: Player[] = plsRaw.map((pRaw) => {
           const p = pRaw as Record<string, unknown>;
 
-          // Normalizar id a number cuando sea posible; si no, generar id numérico temporal negativo
+          // Normalize id to a number when possible; otherwise, generate a temporary negative numeric id.
           const rawId = p.id as unknown;
           let idNum: number;
           if (typeof rawId === "number") {
@@ -213,7 +249,7 @@ export default function TeamDetailPage(): JSX.Element {
           } as Player;
         });
 
-        // Asegurar unicidad de ids numéricos (si hubiera duplicados por datos sucios)
+        // Ensure uniqueness of numeric IDs (if there are duplicates due to dirty data)
         const seen = new Set<number>();
         const uniquePlayers = normalized.map((pl) => {
           let pid = pl.id;
@@ -227,7 +263,7 @@ export default function TeamDetailPage(): JSX.Element {
         if (!cancelled) setPlayers(uniquePlayers);
       } catch (err) {
         console.error(err);
-        setError("The team or its players could not be loaded.");
+        setError(t("team_or_players_coudnt_load"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -240,7 +276,7 @@ export default function TeamDetailPage(): JSX.Element {
   }, [id]);
 
 
-  /* ---------- Construcción de alineación inicial ---------- */
+  /* ---------- Initial alignment construction ---------- */
   useEffect(() => {
     if (!players || players.length === 0 || !id || !team) return;
 
@@ -275,7 +311,7 @@ export default function TeamDetailPage(): JSX.Element {
     }
   }, [players, id, team]);
 
-  /* Persistencia local */
+  /* Local persistence */
   useEffect(() => {
     if (!id) return;
     saveLineupToStorage(id, fieldSlots);
@@ -306,7 +342,7 @@ export default function TeamDetailPage(): JSX.Element {
       `${name} FC`,
       `${name} C.F.`,
       `${name} F.C.`,
-      `${name} Club de Fútbol`,
+      `${name} Futbol Club`,
     ]);
     return Array.from(base);
   }, [team?.name]);
@@ -323,7 +359,7 @@ export default function TeamDetailPage(): JSX.Element {
 
         const apiKey = NEWSAPI_KEY?.trim();
         if (!apiKey) {
-          setNewsError("No API key is configured for news.");
+          setNewsError(t("no_api_key_configured"));
           setNews([]);
           return;
         }
@@ -350,7 +386,7 @@ export default function TeamDetailPage(): JSX.Element {
         )}&searchIn=title,description&apiKey=${apiKey}`;
 
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`News fetch failed: ${res.status} ${res.statusText}`);
+        if (!res.ok) throw new Error(`${t("news_fetch_fail")} ${res.status} ${res.statusText}`);
         const data = await res.json();
         if (cancelled) return;
 
@@ -369,8 +405,8 @@ export default function TeamDetailPage(): JSX.Element {
 
         setNews(filtered);
       } catch (err) {
-        console.error("load news failed", err);
-        setNewsError("News could not be loaded.");
+        console.error(t("load_news_fail"), err);
+        setNewsError(t("news_not_load"));
         setNews([]);
       } finally {
         if (!cancelled) setNewsLoading(false);
@@ -383,7 +419,7 @@ export default function TeamDetailPage(): JSX.Element {
     };
   }, [team?.name, NEWSAPI_KEY, teamAliases]);
 
-  /* ---------- Render helpers (hooks still here) ---------- */
+  /* ---------- Render helpers ---------- */
   const playersById = useMemo(() => {
     const map = new Map<string, Player>();
     for (const p of players) if (p.id !== undefined && p.id !== null) map.set(String(p.id), p);
@@ -397,6 +433,12 @@ export default function TeamDetailPage(): JSX.Element {
   const substitutesBench = substitutes.filter((p) => !assignedIds.has(p.id));
 
   /* ---------- Player helpers ---------- */
+
+  /**
+   * Convert a partial object into a valid Player
+   * @param p Partial Player
+   * @returns Complete Player
+   */
   function normalizePlayer(p: Partial<Player> & Record<string, any>): Player {
     return {
       id: p.id ?? Math.random().toString(36).slice(2),
@@ -418,6 +460,11 @@ export default function TeamDetailPage(): JSX.Element {
     } as Player;
   }
 
+  /**
+   * Assign player to the selectedPlayer constant.
+   * @param p Player or null
+   * @returns Clear the selection if it is null, otherwise assign the player to selectedPlayer.
+   */
   function openPlayer(p: Player | null) {
     if (!p) {
       setSelectedPlayer(null);
@@ -427,6 +474,13 @@ export default function TeamDetailPage(): JSX.Element {
   }
 
   /* ---------- Drag & drop helpers ---------- */
+
+  /**
+   * Dragging a player off the field
+   * @param e Event
+   * @param playerId Dragged player ID
+   * @param fromSlotId Slot of the field from which it is dragged
+   */
   function onDragStartFromField(e: React.DragEvent, playerId: number | string, fromSlotId: string) {
     setPreventAutoFill(false);
     preventAutoFillRef.current = false;
@@ -434,6 +488,12 @@ export default function TeamDetailPage(): JSX.Element {
     e.dataTransfer.effectAllowed = "move";
   }
 
+  /**
+   * Dragging a player from the bench
+   * @param e Event
+   * @param playerId Dragged player ID
+   * @returns 
+   */
   function onDragStartFromBench(e: React.DragEvent, playerId: number | string) {
     const dragged = playersById.get(String(playerId));
     if (!dragged || !dragged.isStarter) {
@@ -446,12 +506,23 @@ export default function TeamDetailPage(): JSX.Element {
     e.dataTransfer.effectAllowed = "move";
   }
 
+  /**
+   * Action of dragging a player onto a slot on the field. Enables the drop and highlights it.
+   * @param e 
+   */
   function onDragOverSlot(e: React.DragEvent) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     (e.currentTarget as HTMLElement).classList.add("drag-over");
   }
 
+  /**
+   * Ensure that after any operation (drag & drop, delete, etc.), the field does not have any gaps 
+   * if there are still starting players available on the bench. Unless the user is the one performing the alignment.
+   * @param nextSlots Updated lineup
+   * @param currentPlayers All the players on the team
+   * @returns 
+   */
   function ensureFieldNotEmpty(nextSlots: LineupSlot[], currentPlayers: Player[]) {
     if (preventAutoFillRef.current) return nextSlots;
     const hasStarters = currentPlayers.some((p) => p.isStarter);
@@ -469,6 +540,13 @@ export default function TeamDetailPage(): JSX.Element {
     return next;
   }
 
+  /**
+   * This is executed when a player is released onto the field and is responsible for 
+   * managing where they came from and where they are going (bench or field position).
+   * @param e 
+   * @param targetSlotId Slot on which the player is released
+   * @returns 
+   */
   function onDropToSlot(e: React.DragEvent, targetSlotId: string) {
     e.preventDefault();
     const raw = e.dataTransfer.getData("text/plain");
@@ -489,6 +567,7 @@ export default function TeamDetailPage(): JSX.Element {
 
       const fromSlot = next.find((s) => String(s.playerId) === String(pid));
 
+      // Movement of a player from one slot on the field to another empty slot
       if (preventAutoFillRef.current || target.noAutoFill) {
         if (fromSlot) fromSlot.playerId = null;
         target.playerId = pid;
@@ -496,6 +575,7 @@ export default function TeamDetailPage(): JSX.Element {
         return next;
       }
 
+      // Exchange of positions between two players already on the field.
       if (fromSlot && fromSlot.slotId !== target.slotId) {
         const temp = target.playerId;
         target.playerId = fromSlot.playerId;
@@ -505,6 +585,7 @@ export default function TeamDetailPage(): JSX.Element {
         return ensuredSwap;
       }
 
+      // Place a player from the bench on a slot that already has a player.
       if (!fromSlot && target.playerId) {
         target.playerId = pid;
         const ensuredReplace = ensureFieldNotEmpty(next, players);
@@ -512,6 +593,7 @@ export default function TeamDetailPage(): JSX.Element {
         return ensuredReplace;
       }
 
+      // Place a player (from the field or bench) in an empty slot.
       target.playerId = pid;
       const ensured = ensureFieldNotEmpty(next, players);
       if (id) saveLineupToStorage(id, ensured);

@@ -15,9 +15,9 @@ function normalizeLower(raw?: string | null): string {
 }
 
 /**
- * DISPLAY_TO_ACRONYM: mapea variantes de texto guardadas (lowercased)
- * a la abreviatura que queremos almacenar/usar en la UI (ej "gk","rb").
- * Añade aquí variantes localizadas o legacy que puedas tener.
+ * DISPLAY_TO_ACRONYM: Maps saved text variants (lowercased)
+* to the abbreviation we want to store/use in the UI (e.g., “gk,” “rb”).
+* Add localized variants that may occur here.
  */
 const DISPLAY_TO_ACRONYM: Record<string, string> = {
   // goalkeeper
@@ -53,7 +53,7 @@ const DISPLAY_TO_ACRONYM: Record<string, string> = {
   "full-back": "fb",
   "fb": "fb",
 
-  // centre-back (note JSON uses "centre-back")
+  // centre-back
   "centre-back": "cb",
   "centre back": "cb",
   "centre_back": "cb",
@@ -106,9 +106,8 @@ const DISPLAY_TO_ACRONYM: Record<string, string> = {
 };
 
 /* ---------------- POS_OPTIONS ----------------
-   - value: la abreviatura que guardamos en p.positions (ej "gk", "rb")
-   - labelKey: la clave de traducción que muestra el texto completo (ej "goalkeeper")
-   Asegúrate de que tus JSON tengan esas claves en root (ej "goalkeeper": "Goalkeeper (GK)").
+   - value: the abbreviation we save in p.positions (e.g., “gk,” “rb”)
+   - labelKey: the translation key that displays the full text (e.g., “goalkeeper”)
 */
 const POS_OPTIONS: { value: string; labelKey: string }[] = [
   { value: "gk", labelKey: "goalkeeper" },
@@ -127,8 +126,8 @@ const POS_OPTIONS: { value: string; labelKey: string }[] = [
 ];
 
 /* ---------------- PlayerPositions component ----------------
-   Muestra las abreviaturas traducidas (ej "GK", "RB") a partir de p.positions,
-   que ahora contienen solo las abreviaturas.
+ * Displays the translated abbreviations (e.g., “GK,” “RB”) from p.positions, 
+ * which now contain only the abbreviations.
 */
 function PlayerPositions({ positions, className }: { positions?: string[] | null; className?: string }) {
   const { t, lang } = useI18n();
@@ -139,13 +138,13 @@ function PlayerPositions({ positions, className }: { positions?: string[] | null
     return positions
       .map((acr) => {
         if (!acr) return "";
-        const key = normalizeLower(acr); // acr expected like "gk","rb"
-        // 1) Intentamos t("gk") -> en tus JSON "gk": "GK"
+        const key = normalizeLower(acr); 
+        // 1) We try t("gk") 
         const rootTry = t(key);
         if (rootTry && rootTry !== key) return rootTry;
 
-        // 2) fallback: si no existe, intentar mapear a labelKey (ej "goalkeeper") y mostrar su texto completo
-        //    (esto es raro si guardamos acrónimos, pero lo dejamos por seguridad)
+        // 2) fallback: if it doesn't exist, try to map to labelKey (e.g., “goalkeeper”) and display its full text
+        //    (this is rare if we store acronyms, but we leave it in for safety)
         const mapToLabelKey: Record<string, string> = {
           gk: "goalkeeper",
           rb: "right_back",
@@ -165,16 +164,16 @@ function PlayerPositions({ positions, className }: { positions?: string[] | null
         if (labelKey) {
           const label = t(labelKey);
           if (label && label !== labelKey) {
-            // si label es "Goalkeeper (GK)" devolvemos solo la parte acrónima si quieres,
-            // pero aquí devolvemos la abreviatura preferida (t(key)) si existe, o la etiqueta completa.
-            // Para mantener la vista contraída con solo acrónimos, intentamos extraer la abreviatura:
+            // If label is “Goalkeeper (GK),” we return only the acronym,
+            // but here we return the preferred abbreviation (t(key)) if it exists, or the full label.
+            // To keep the view collapsed with only acronyms, we try to extract the abbreviation:
             const acrMatch = String(label).match(/\(([A-Za-z0-9]{1,4})\)/);
             if (acrMatch) return acrMatch[1];
             return label;
           }
         }
 
-        // 3) fallback final: devolver la abreviatura tal cual
+        // 3) final fallback: return the abbreviation as is
         return acr;
       })
       .filter(Boolean)
@@ -199,6 +198,9 @@ export default function AddTeamPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  /**
+   * Ensure the height of the top banner (.top-banner) at all times and save it in a CSS variable --top-offset.
+   */
   useEffect(() => {
     const bannerSelector = ".top-banner";
     const updateOffset = () => {
@@ -221,6 +223,13 @@ export default function AddTeamPage(): JSX.Element {
   }, []);
 
   /* ---------- Helpers: file/image ---------- */
+
+  /**
+   * Convert a file into a base64 data URL. 
+   * This is useful for previewing images in the browser without having to upload them to the server.
+   * @param file 
+   * @returns Base64 URL
+   */
   async function fileToDataUrl(file: File): Promise<string> {
     return await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -230,11 +239,22 @@ export default function AddTeamPage(): JSX.Element {
     });
   }
 
+  /**
+   * Converts an SVG string (example: “<svg>...</svg>”) into a Base64 Data URL. 
+   * Like the previous function, this allows you to view it without having to save it at that moment.
+   * @param svg 
+   * @returns Base64 URL
+   */
   function svgToBase64DataUrl(svg: string) {
     const encoded = btoa(unescape(encodeURIComponent(svg)));
     return `data:image/svg+xml;base64,${encoded}`;
   }
 
+  /**
+   * Convert text into its acronym. This is to replace the photo of a player who does not have their acronyms.
+   * @param name 
+   * @returns Acronym for name
+   */
   function makeInitials(name: string) {
     if (!name) return "P";
     const parts = name.trim().split(/\s+/);
@@ -242,12 +262,26 @@ export default function AddTeamPage(): JSX.Element {
     return (parts[0][0] + (parts[1][0] ?? "")).toUpperCase();
   }
 
+  /**
+   * It creates an SVG with the player's initials on a colored background, converts it to Base64, and returns it as a Data URL. 
+   * This combines two of the functions mentioned above.
+   * @param name 
+   * @param colorBg 
+   * @param colorFg 
+   * @param size 
+   * @returns Base64 URL
+   */
   function generatePlayerSvgDataUrl(name: string, colorBg = "#0b1220", colorFg = "#ffffff", size = 128) {
     const initials = makeInitials(name);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"> <rect width="100%" height="100%" fill="${colorBg}" rx="${Math.round(size * 0.08)}" /> <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="${Math.round(size * 0.45)}" fill="${colorFg}" font-weight="700">${initials}</text> </svg>`;
     return svgToBase64DataUrl(svg);
   }
 
+  /**
+   * Image validator and normalizer.
+   * @param raw Any input that can represent an image (base64, SVG, URL, etc.).
+   * @returns Valid URL format or HTTP/HTTPS URL if hosted on the web, or null if invalid.
+   */
   function normalizeDataUrl(raw?: string | null): string | null {
     if (!raw) return null;
     let s = String(raw).trim();
@@ -256,8 +290,7 @@ export default function AddTeamPage(): JSX.Element {
     if (/^[A-Za-z0-9+/=]{20,}$/.test(s)) return `data:image/png;base64,${s}`;
     if (s.includes("<svg")) {
       try {
-        const encoded = btoa(unescape(encodeURIComponent(s)));
-        return `data:image/svg+xml;base64,${encoded}`;
+        return svgToBase64DataUrl(s)
       } catch {
         return null;
       }
@@ -266,6 +299,11 @@ export default function AddTeamPage(): JSX.Element {
     return null;
   }
 
+  /**
+   * Image validator and normalizer.
+   * @param raw Image
+   * @returns Valid URL format or HTTP/HTTPS URL if hosted on the web, or null if invalid..
+   */
   function sanitizePhoto(raw: string): string | null {
     if (!raw) return null;
     const s = raw.trim();
@@ -277,6 +315,13 @@ export default function AddTeamPage(): JSX.Element {
   }
 
   /* ---------- CSV parser (supports quoted fields with ;) ---------- */
+  
+  /**
+   * Read a CSV text (with separator ; and headers such as name;number;positions;summoned;photo) and convert it into an array of objects 
+   * with normalized fields: name, number, positions, titular, photo (which are the same words but in Spanish).
+   * @param text Full CSV
+   * @returns JavaScript object array with the CSV information.
+   */
   function parseCSV(text: string) {
     const rows: string[][] = [];
     const lines = text.split(/\r?\n/);
@@ -341,6 +386,10 @@ export default function AddTeamPage(): JSX.Element {
     setExpandedIndex(0);
   };
 
+  /**
+   * Asynchronous function that receives the index of the player to be removed from the players array.
+   * @param idx id of the player.
+   */
   const removePlayer = async (idx: number): Promise<void> => {
     const playerToRemove = players[idx];
     if (!playerToRemove) {
@@ -348,7 +397,7 @@ export default function AddTeamPage(): JSX.Element {
       return;
     }
 
-    // 1) Actualizar state local
+    // 1) Update local state
     let newPlayers: typeof players = [];
     setPlayers((prev) => {
       newPlayers = prev.filter((_, i) => i !== idx);
@@ -356,10 +405,16 @@ export default function AddTeamPage(): JSX.Element {
     });
     setExpandedIndex(null);
 
-    // 2) Sincronizar en servidor: actualizar team.players (no tocar /players)
+    // 2) Synchronize on server
     await syncPlayersToTeam(newPlayers);
   };
 
+  /**
+   * Update player fields
+   * @param idx player id
+   * @param key fields name
+   * @param value changed value
+   */
   const updatePlayerField = <K extends keyof PlayerForm>(idx: number, key: K, value: PlayerForm[K]) => {
     setPlayers((prev) => {
       const next = prev.slice();
@@ -368,6 +423,12 @@ export default function AddTeamPage(): JSX.Element {
     });
   };
 
+  /**
+   * Update a player's photo when the user selects a file in the input. 
+   * Both the actual file and a preview (dataUrl) are saved so that it can be displayed immediately in the UI.
+   * @param idx player id
+   * @param file player new photo
+   */
   const handlePlayerPhotoChange = async (idx: number, file: File | null) => {
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
@@ -379,13 +440,23 @@ export default function AddTeamPage(): JSX.Element {
     });
   };
 
-    // helper: id corto tipo hex
+
+  /**
+   * Create a ID by combining: the current time (last 9 digits), and a random number between 0 and 899. 
+   * It is used as a temporary identifier in the frontend for players/teams before synchronizing with the backend.
+   * @returns Unique numeric ID
+   */
   const generateId = (): number => {
   return Math.floor(Date.now() % 1_000_000_000) + Math.floor(Math.random() * 900);
 };
 
 
-  // helper: sincroniza players al team (PUT /teams/:id)
+  /**
+   * Keeps team players synchronized with the server. Every time players are added, edited, 
+   * or deleted in the frontend, this function updates the team object in the backend (PUT /teams/:id).
+   * @param newPlayers 
+   * @returns 
+   */
   const syncPlayersToTeam = async (newPlayers: PlayerForm[]) => {
     if (!id) return;
     try {
@@ -394,7 +465,7 @@ export default function AddTeamPage(): JSX.Element {
       const teamPayload = {
         ...currentTeam,
         players: newPlayers.map((p) => ({
-          id: Number(p.id ?? generateId()), // forzar number
+          id: Number(p.id ?? generateId()), 
           name: p.name,
           number: Number(p.number) || 0,
           positions: Array.isArray(p.positions) ? p.positions : [],
@@ -406,22 +477,27 @@ export default function AddTeamPage(): JSX.Element {
       await api.put(`/teams/${id}`, teamPayload);
     } catch (err) {
       console.error("PUT /teams/:id (sync players) failed:", err);
-      setError("No se pudo sincronizar los jugadores en el servidor. Revisa la consola.");
+      setError(t("players_not_synchronized"));
     }
   };
 
-  /* ---------- Save player (comprimir) ---------- */
+  /* ---------- Save player (compress) ---------- */
+
+  /**
+   * Save a player's changes to the local state and synchronize them with the server. 
+   * This action is performed when the user clicks the “Save player” button.
+   * @param idx Player id
+   */
   const savePlayer = async (idx: number) => {
     const p = players[idx];
     if (!p) return;
     if (!p.name || p.name.trim() === "") {
-      setError("El jugador debe tener un nombre antes de guardar.");
+      setError(t("player_must_have_name"));
       return;
     }
     setError(null);
     setExpandedIndex(null);
 
-    // Construir copia tipada explícitamente
     const copy: PlayerForm[] = players.map((pl, i) =>
       i === idx
         ? {
@@ -438,13 +514,17 @@ export default function AddTeamPage(): JSX.Element {
         : pl
     );
 
-    // Actualizar state y sincronizar
     setPlayers(copy);
-    // sincronizar en background (o await si prefieres bloquear)
     syncPlayersToTeam(copy);
   };
 
-  /* ---------- Import CSV (robusto) ---------- */
+  /* ---------- Import CSV ---------- */
+
+  /**
+   * Import a CSV file of players and convert it into ready-to-use PlayerForm objects, 
+   * with photos and normalized positions.
+   * @param file 
+   */
   const handleImportCSV = async (file: File) => {
     try {
       const text = await file.text();
@@ -472,9 +552,7 @@ export default function AddTeamPage(): JSX.Element {
           }
         }
         if (!photoPreview) {
-          const teamColorBg = id && id.toString().toLowerCase().includes("barca") ? "#A50044" : "#0b1220";
-          const teamColorFg = id && id.toString().toLowerCase().includes("barca") ? "#FFD400" : "#ffffff";
-          photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player", teamColorBg, teamColorFg);
+          photoPreview = generatePlayerSvgDataUrl(row.nombre || "Player", "#0b1220", "#ffffff");
         } else {
           const normalized = normalizeDataUrl(photoPreview);
           if (normalized) photoPreview = normalized;
@@ -517,13 +595,17 @@ export default function AddTeamPage(): JSX.Element {
       setExpandedIndex(imported.length ? 0 : null);
     } catch (err) {
       console.error(err);
-      setError("Error importando CSV. Revisa el formato.");
+      setError(t("csv_import_error"));
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   /* ---------- Export CSV ---------- */
+
+  /**
+   * Generate a CSV file with all current players and force the download in the browser.
+   */
   const handleExportCSV = () => {
     const header = "name;number;positions;summoned;photo";
     const lines = players.map((p) => {
@@ -546,36 +628,42 @@ export default function AddTeamPage(): JSX.Element {
     URL.revokeObjectURL(url);
   };
 
-  /* ---------- Submit (guardar equipo y jugadores) ---------- */
+  /* ---------- Submit ---------- */
+
+  /**
+   * Manage the submission of the equipment form. Save the complete equipment.
+   * @param e 
+   * @returns 
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
       setLoading(true);
 
-      // Validar duplicados
+      // Validate duplicates
       try {
         const allTeamsRes = await api.get("/teams");
         const allTeams: Team[] = allTeamsRes.data || [];
         const currentName = teamName.trim().toLowerCase();
         const isDuplicate = allTeams.some(t => t.name?.trim().toLowerCase() === currentName && String(t.id) !== String(id));
         if (isDuplicate) {
-          setError("Ya existe un equipo con ese nombre. Elige otro nombre único.");
+          setError(t("players_name_exist"));
           setLoading(false);
           return;
         }
       } catch (checkErr) {
-        console.warn("No se pudo validar nombres duplicados:", checkErr);
+        console.warn(t("error_validating_names"), checkErr);
       }
 
-      // payload base del equipo
+      // base payload of the equipment
       const teamPayload: Partial<Team> = {
         name: teamName.trim(),
         description: teamDescription.trim(),
         logo: teamLogoPreview ?? undefined,
       };
 
-      // Crear o actualizar equipo (sin players aún)
+      // Create or update team (no players yet)
       let savedTeam: Team | null = null;
       if (id) {
         const res = await api.put(`/teams/${id}`, { ...teamPayload });
@@ -586,12 +674,12 @@ export default function AddTeamPage(): JSX.Element {
       }
 
       if (!savedTeam || savedTeam.id === undefined || savedTeam.id === null) {
-        setError("El servidor no devolvió un id válido para el equipo.");
+        setError(t("no_team_id"));
         setLoading(false);
         return;
       }
 
-      // Construir players desde el state y persistirlos dentro del team
+      // Build players from the state and persist them within the team
       const persistedPlayers = players.map(p => ({
         id: p.id,
         name: p.name.trim(),
@@ -602,20 +690,25 @@ export default function AddTeamPage(): JSX.Element {
         positionSlot: p.positionSlot ?? undefined,
       }));
 
-      // Actualizar team con players embebidos
+      // Update team with embedded players
       await api.put(`/teams/${savedTeam.id}`, { ...savedTeam, players: persistedPlayers });
 
       setError(null);
       navigate(`/teams/${savedTeam.id}`);
     } catch (err) {
-      console.error("save team failed", err);
-      setError(`No se pudo guardar el equipo. ${(err as any)?.message ?? String(err)}`);
+      console.error(t("save_team_failed"), err);
+      setError(`${t("could_not_save_team")} ${(err as any)?.message ?? String(err)}`);
     } finally {
       setLoading(false);
     }
   };
 
   /* ---------- Load team & players ---------- */
+
+  /**
+   * If there is an ID, load the equipment from the backend and fill in the form with its details. 
+   * If there is no ID, initialize the empty form to create new equipment.
+   */
   useEffect(() => {
     const load = async () => {
       try {
@@ -646,8 +739,8 @@ export default function AddTeamPage(): JSX.Element {
           setPlayers([]);
         }
       } catch (e) {
-        console.error("load team failed", e);
-        setError("No se pudo cargar el equipo.");
+        console.error(t("load_team_failed"), e);
+        setError(t("could_not_load_team"));
       } finally {
         setLoading(false);
       }

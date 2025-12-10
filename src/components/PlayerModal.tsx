@@ -8,7 +8,6 @@ import { langToAcronym } from "../utils/langAcronym";
 type Props = {
   player: Player | null;
   onClose: () => void;
-  /** Si true, intentará traer el extracto completo de Wikipedia (más largo). */
   preferFullWiki?: boolean;
 };
 
@@ -34,7 +33,7 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
 
       try {
         console.log(langAcronym);
-        // 1) Intentamos el endpoint REST summary (rápido y CORS-friendly)
+        // 1) We tried the REST summary endpoint (fast and CORS-friendly)
         const summaryUrl = `https://${langAcronym}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
         try {
           const res = await axios.get(summaryUrl, { timeout: 6000 });
@@ -42,10 +41,10 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
             setWikiShort(String(res.data.extract));
           }
         } catch {
-          // no pasa nada si falla; seguimos intentando con query
+          // It's okay if it fails; we'll keep trying with the query.
         }
 
-        // 2) Si preferimos el extracto completo, pedimos via action=query (texto plano)
+        // 2) If we prefer the full extract, we request it via action=query (plain text).
         if (preferFullWiki) {
           // action=query supports CORS with origin=*
           const queryUrl = `https://${langAcronym}.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=1&format=json&titles=${encodeURIComponent(
@@ -59,14 +58,12 @@ export default function PlayerModal({ player, onClose, preferFullWiki = true }: 
               const pageKey = Object.keys(pages)[0];
               const page = pages[pageKey];
               if (page && page.extract) {
-                // page.extract puede ser muy largo; lo guardamos como wikiFull
+                // page.extract can be very long; we save it as wikiFull
                 setWikiFull(String(page.extract));
                 return;
               }
             }
-          } catch {
-            // fallback silencioso
-          }
+          } catch { /* empty */ }
         }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {

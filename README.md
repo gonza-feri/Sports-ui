@@ -10,34 +10,29 @@ DreamLeague is a **React + TypeScript** web application to manage football teams
 - **Player management:** add and edit players, set positions, numbers, photos, and mark matchday starters.  
 - **Lineup editor:** visual pitch with drag‑and‑drop to place players; lineup is persisted with the team.  
 - **News integration:** fetch recent articles related to a team (configurable API key).  
-- **CSV import:** import players from CSV files; multi‑position players supported via delimited fields.  
+- **CSV import/export:** import players from CSV files and export them back; multi‑position players supported via delimited fields.  
 - **Local cache:** lineup edits are cached in `localStorage` while editing for quick recovery.  
 - **Single source of truth:** players are stored inside `team.players` and updated via `PUT /teams/:id`.
 
-## CSV import format (brief)
+## CSV format (import/export)
 
-**Required columns**
+**Columns**
 - **name** — Player full name (string).  
 - **number** — Squad number (integer).  
-- **positions** — One field with one or more positions (see formats below).  
-- **isStarter** — `true` / `false` (optional; marks matchday starters).
+- **positions** — One field with one or more positions (comma‑separated or other delimiters).  
+- **summoned** — `"si"` if the player is marked as starter, otherwise empty.  
+- **photo** — URL or Data URL to the player photo (optional; if missing, an SVG avatar is generated).
 
-**Optional columns**
-- **id** — Backend id (number) to preserve original ids; otherwise the importer generates a temporary id.  
-- **photo** — URL to the player photo (optional).  
-- **teamId** — Numeric team id to associate the player (optional).  
-- **positionSlot** — Free text slot hint (optional).
-
-**Positions field formats (recommended)**
+**Positions field formats (supported)**
 - Semicolon: `GK;CB;LB`  
 - Pipe: `GK|CB|LB`  
-- Comma: `"GK,CB,LB"` (wrap in quotes if CSV uses comma as separator)  
+- Comma: `GK,CB,LB`  
 - JSON array: `["GK","CB","LB"]` (accepted but requires JSON parsing)
 
 **Parsing notes**
 - The importer splits the `positions` field on common delimiters (`;`, `|`, `,`) and trims values.  
-- Numeric `id` values are preserved when possible; non‑numeric or missing ids get a generated temporary id for UI use.  
-- Photo URLs are copied into `photo`/`photoPreview` fields; large images are not embedded.  
+- Starter flag is recognized from values like `si`, `sí`, `yes`, `true`, `1`, `x`.  
+- Photo URLs are fetched and converted to Data URLs when possible; otherwise an SVG avatar is generated.  
 - Keep header names exactly as shown (case‑insensitive) to simplify automatic mapping.
 
 ## Technical notes and recent changes

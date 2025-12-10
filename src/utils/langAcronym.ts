@@ -1,5 +1,5 @@
 export function langToAcronym(langCode?: string | null): string {
-  if (!langCode) return "gb";
+  if (!langCode) return "en";
   const parts = String(langCode).toLowerCase().split(/[-_]/);
   const base = parts[0];
   const region = parts[1];

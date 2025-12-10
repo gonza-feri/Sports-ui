@@ -50,10 +50,8 @@ const FLAGS: Record<LangCode, string> = {
 };
 
 export default function LanguageSwitcher(): JSX.Element {
-  // Usamos tu I18nProvider (lang, setLang) para mantener todo sincronizado
   const { lang, setLang } = useI18n();
 
-  // Normaliza por si alguna vez llega "es-ES" o similar (no debería con tu provider)
   const normalized: LangCode = (["en", "es", "sl"].includes(lang) ? lang : "en") as LangCode;
 
   const [open, setOpen] = useState(false);
@@ -71,7 +69,7 @@ export default function LanguageSwitcher(): JSX.Element {
     setOpen(false);
   };
 
-  // Cerrar al hacer click fuera
+  // Close by clicking outside
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!ref.current) return;

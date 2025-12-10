@@ -11,9 +11,11 @@ export default function Menu() {
   const navigate = useNavigate();
   const isTeamsAdd = location.pathname.startsWith("/teams/add");
 
-  // estado para mostrar/ocultar el header
   const [showHeader] = useState(true);
 
+  /**
+   * Calculate how much space the menu takes up so that you can retransmit it.
+   */
   useEffect(() => {
     const headerEl = document.querySelector(".app-header") as HTMLElement | null;
     const updateOffset = () => {
@@ -27,12 +29,16 @@ export default function Menu() {
     return () => window.removeEventListener("resize", updateOffset);
   }, []);
 
-  // función genérica para confirmar salida
+  /**
+   * Generic function to confirm output of links such as forms from /teams/add/
+   * @param e
+   * @param path 
+   */
   const handleNavClick = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
     if (isTeamsAdd) {
       const confirmLeave = window.confirm(
-        "If you return, you will lose any unsaved changes. Do you want to continue?"
+        t("return_confirm")
       );
       if (confirmLeave) navigate(path);
     } else {
